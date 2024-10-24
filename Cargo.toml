@@ -25,3 +25,6 @@ required-features = ["tokio"]
 
 [example.exponential.dependencies]
 tokio = { version = "1", features = ["full"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"]}
