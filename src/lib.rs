@@ -23,7 +23,6 @@ impl Mulligan {
         self.stop_after = Some(attempts);
         self
     }
-    #[cfg(feature = "tokio")]
     pub async fn spawn<S, F, Fut, Args, T, E>(
         &self,
         strategy: &mut S,
