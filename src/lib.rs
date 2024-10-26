@@ -6,38 +6,40 @@ compile_error!("Either 'tokio' or 'async-std' feature must be enabled");
 
 pub mod strategy;
 
-use std::{future::Future, time::Duration};
+use std::{future::Future, marker::PhantomData, time::Duration};
 
-use strategy::{Exponential, Fixed, Jitter, Linear, Strategy};
+pub use strategy::Jitter;
+use strategy::{Exponential, Fixed, Linear, Strategy};
 
-pub struct Mulligan<T, E> {
+pub fn stop_if_ok<T, E>() -> Mulligan<T, E, impl Fn(&Result<T, E>) -> bool + Send + Sync> {
+    stop_if(|result: &Result<T, E>| result.is_ok())
+}
+
+pub fn stop_if<T, E, F>(f: F) -> Mulligan<T, E, F>
+where
+    F: Fn(&Result<T, E>) -> bool + Send + Sync,
+{
+    Mulligan {
+        stop_after: None,
+        stop_if: f,
+        _phantom: PhantomData,
+    }
+}
+pub struct Mulligan<T, E, Cond>
+where
+    Cond: Fn(&Result<T, E>) -> bool + Send + Sync,
+{
     stop_after: Option<u32>,
-    #[allow(clippy::type_complexity)]
-    stop_if: Box<dyn Fn(&Result<T, E>) -> bool + Send + Sync>,
+    stop_if: Cond,
+    _phantom: PhantomData<(T, E)>,
 }
 
-impl<T, E> Default for Mulligan<T, E> {
-    fn default() -> Self {
-        Self {
-            stop_after: None,
-            stop_if: Box::new(|_| false),
-        }
-    }
-}
-
-impl<T, E> Mulligan<T, E> {
-    pub fn new() -> Self {
-        Self::default()
-    }
+impl<T, E, Cond> Mulligan<T, E, Cond>
+where
+    Cond: Fn(&Result<T, E>) -> bool + Send + Sync,
+{
     pub fn stop_after(mut self, attempts: u32) -> Self {
         self.stop_after = Some(attempts);
-        self
-    }
-    pub fn stop_if<F>(mut self, f: F) -> Self
-    where
-        F: Fn(&Result<T, E>) -> bool + Send + Sync + 'static,
-    {
-        self.stop_if = Box::new(f);
         self
     }
     async fn retry<S, F, Fut>(&self, strategy: &mut S, f: F) -> Result<T, E>
@@ -52,7 +54,6 @@ impl<T, E> Mulligan<T, E> {
                 .stop_after
                 .map(|max| strategy.attempt() >= max)
                 .unwrap_or(false)
-                | res.is_ok()
                 | (self.stop_if)(&res)
             {
                 return res;

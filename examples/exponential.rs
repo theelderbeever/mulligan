@@ -1,7 +1,5 @@
 use std::time::Duration;
 
-use mulligan::Mulligan;
-
 async fn this_errors(msg: String) -> std::io::Result<()> {
     println!("{msg}");
     Err(std::io::Error::other("uh oh!"))
@@ -10,19 +8,18 @@ async fn this_errors(msg: String) -> std::io::Result<()> {
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     let hello = tokio::spawn(async move {
-        Mulligan::new()
+        mulligan::stop_if_ok()
             .stop_after(10)
-            .stop_if(|_| true)
             .exponential(
                 Duration::from_secs(1),
                 Some(Duration::from_secs(3)),
-                None,
+                Some(mulligan::Jitter::Full),
                 || async move { this_errors("hello".to_string()).await },
             )
             .await
     });
     let world = tokio::spawn(async move {
-        Mulligan::new()
+        mulligan::stop_if_ok()
             .stop_after(10)
             .linear(
                 Duration::from_secs(2),
@@ -32,7 +29,7 @@ async fn main() {
             .await
     });
     let universe = tokio::spawn(async move {
-        Mulligan::new()
+        mulligan::stop_if_ok()
             .stop_after(10)
             .linear(
                 Duration::from_secs(2),
