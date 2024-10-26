@@ -40,7 +40,7 @@ impl<T, E> Mulligan<T, E> {
         self.stop_if = Box::new(f);
         self
     }
-    pub async fn retry<S, F, Fut>(&self, strategy: &mut S, f: F) -> Result<T, E>
+    async fn retry<S, F, Fut>(&self, strategy: &mut S, f: F) -> Result<T, E>
     where
         S: Strategy + Send,
         F: Fn() -> Fut + Send + Sync + 'static,
