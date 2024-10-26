@@ -16,6 +16,19 @@ impl Exponential {
     pub fn new() -> Self {
         Self::default()
     }
+    pub fn new_with_values(
+        base: Duration,
+        max_delay: Option<Duration>,
+        jitter: Option<Jitter>,
+    ) -> Self {
+        Self {
+            attempt: 0,
+            base,
+            max_delay,
+            jitter,
+            previous: None,
+        }
+    }
     pub fn base(mut self, dur: Duration) -> Self {
         self.base = dur;
         self

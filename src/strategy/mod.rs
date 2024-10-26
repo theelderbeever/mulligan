@@ -2,7 +2,7 @@ mod exponential;
 
 use std::time::Duration;
 
-pub use exponential::Exponential;
+pub use exponential::{Exponential, Jitter};
 
 pub trait Strategy {
     fn attempt(&self) -> u32;
@@ -13,7 +13,11 @@ pub struct Fixed {
     attempt: u32,
     dur: Duration,
 }
-
+impl Fixed {
+    pub fn new_with_values(dur: Duration) -> Self {
+        Self { attempt: 0, dur }
+    }
+}
 impl Strategy for Fixed {
     fn attempt(&self) -> u32 {
         self.attempt
@@ -29,6 +33,16 @@ pub struct Linear {
     attempt: u32,
     delay: Duration,
     max_delay: Option<Duration>,
+}
+
+impl Linear {
+    pub fn new_with_values(base: Duration, max_delay: Option<Duration>) -> Self {
+        Self {
+            attempt: 0,
+            delay: base,
+            max_delay,
+        }
+    }
 }
 
 impl Strategy for Linear {

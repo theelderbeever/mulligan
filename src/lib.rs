@@ -8,14 +8,24 @@ pub mod strategy;
 
 use std::{future::Future, time::Duration};
 
-use strategy::Strategy;
+use strategy::{Exponential, Fixed, Jitter, Linear, Strategy};
 
-#[derive(Default)]
-pub struct Mulligan {
+pub struct Mulligan<T, E> {
     stop_after: Option<u32>,
+    #[allow(clippy::type_complexity)]
+    stop_if: Box<dyn Fn(&Result<T, E>) -> bool + Send + Sync>,
 }
 
-impl Mulligan {
+impl<T, E> Default for Mulligan<T, E> {
+    fn default() -> Self {
+        Self {
+            stop_after: None,
+            stop_if: Box::new(|_| false),
+        }
+    }
+}
+
+impl<T, E> Mulligan<T, E> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -23,38 +33,74 @@ impl Mulligan {
         self.stop_after = Some(attempts);
         self
     }
-    pub async fn spawn<S, F, Fut, Args, T, E>(
-        &self,
-        strategy: &mut S,
-        f: F,
-        args: Args,
-    ) -> Result<T, E>
+    pub fn stop_if<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&Result<T, E>) -> bool + Send + Sync + 'static,
+    {
+        self.stop_if = Box::new(f);
+        self
+    }
+    pub async fn retry<S, F, Fut>(&self, strategy: &mut S, f: F) -> Result<T, E>
     where
         S: Strategy + Send,
-        F: Fn(Args) -> Fut + Send + Sync + 'static,
+        F: Fn() -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<T, E>> + Send,
-        T: Send + 'static,
-        E: Send + 'static,
-        Args: Clone + Send + 'static,
     {
         loop {
-            let res = f(args.clone()).await;
+            let res = f().await;
             if self
                 .stop_after
                 .map(|max| strategy.attempt() >= max)
                 .unwrap_or(false)
                 | res.is_ok()
+                | (self.stop_if)(&res)
             {
                 return res;
             }
             let sleep_for = strategy.delay();
-            println!(
-                "Attempt: {}, Sleep For: {:?}",
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                "Attempt {} failed. Retry again in {}.",
                 strategy.attempt(),
                 sleep_for
             );
             Self::sleep(sleep_for).await;
         }
+    }
+    pub async fn exponential<F, Fut>(
+        &self,
+        base: Duration,
+        max_delay: Option<Duration>,
+        jitter: Option<Jitter>,
+        f: F,
+    ) -> Result<T, E>
+    where
+        F: Fn() -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, E>> + Send,
+    {
+        let mut strategy = Exponential::new_with_values(base, max_delay, jitter);
+        self.retry(&mut strategy, f).await
+    }
+    pub async fn linear<F, Fut>(
+        &self,
+        base: Duration,
+        max_delay: Option<Duration>,
+        f: F,
+    ) -> Result<T, E>
+    where
+        F: Fn() -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, E>> + Send,
+    {
+        let mut strategy = Linear::new_with_values(base, max_delay);
+        self.retry(&mut strategy, f).await
+    }
+    pub async fn fixed<F, Fut>(&self, dur: Duration, f: F) -> Result<T, E>
+    where
+        F: Fn() -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, E>> + Send,
+    {
+        let mut strategy = Fixed::new_with_values(dur);
+        self.retry(&mut strategy, f).await
     }
 
     #[cfg(feature = "tokio")]

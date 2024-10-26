@@ -13,24 +13,21 @@ async fn main() {
         let mut strategy = Exponential::new().max_delay(Duration::from_secs(3));
         Mulligan::new()
             .stop_after(10)
-            .spawn(
-                &mut strategy,
-                move |msg| async move { this_errors(msg).await },
-                "hello".to_string(),
-            )
+            .retry(&mut strategy, || async move {
+                this_errors("hello".to_string()).await
+            })
             .await
     });
     let world = tokio::spawn(async move {
         let mut strategy = Exponential::new().max_delay(Duration::from_secs(1));
         Mulligan::new()
             .stop_after(10)
-            .spawn(
-                &mut strategy,
-                move |msg| async move { this_errors(msg).await },
-                "world".to_string(),
-            )
+            .retry(&mut strategy, || async move {
+                this_errors("world".to_string()).await
+            })
             .await
     });
+
     let _ = hello.await;
     let _ = world.await;
 }
