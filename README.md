@@ -1,5 +1,7 @@
 # mulligan
 
+A crate for doing a `mulligan` when a future fails. The default features use `tokio::time::sleep` for the backoff delay however, you can alternatively use `async-std`.
+
 ## Examples
 
 ```rust
