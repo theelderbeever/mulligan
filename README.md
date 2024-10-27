@@ -1,6 +1,6 @@
 # mulligan
 
-## Example
+## Examples
 
 ```rust
 use std::time::Duration;

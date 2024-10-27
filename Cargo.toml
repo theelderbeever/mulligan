@@ -5,15 +5,12 @@ edition = "2021"
 
 [features]
 default = ["tokio"]  # Make tokio the default runtime
-tracing = ["dep:tracing"]  # Make tokio the default runtime
 tokio = ["dep:tokio"]  # Depend on tokio when this feature is enabled
 async-std = ["dep:async-std"]  # Depend on async-std when this feature is enabled
 
 [dependencies]
 tokio = { version = "1", optional = true, features = ["time","rt"] }
-tracing ={ version = "*", optional = true }
 async-std = { version = "1", optional = true }
-thiserror = "1"
 
 [target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]
 rand = { version = "0.8", features = ["simd_support"]}

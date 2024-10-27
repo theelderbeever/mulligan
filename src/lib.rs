@@ -8,13 +8,57 @@ use std::{future::Future, marker::PhantomData, time::Duration};
 
 use rand::Rng;
 
+/// Continues retrying the provided future until a successful result is obtained.
+///
+/// # Examples
+///
+/// ```
+/// use std::time::Duration;
+///
+/// async fn this_errors(msg: &str) -> std::io::Result<()> {
+///     println!("{msg}");
+///     Err(std::io::Error::other("uh oh!"))
+/// }
+///
+/// # async fn example() {
+/// mulligan::until_ok()
+///     .stop_after(5)
+///     .max_delay(Duration::from_secs(3))
+///     .full_jitter()
+///     .exponential(Duration::from_secs(1))
+///     .retry(|| async { this_errors("hello").await })
+///     .await;
+/// # }
+/// ```
 pub fn until_ok<T, E>() -> Mulligan<T, E, impl Fn(&Result<T, E>) -> bool> {
     until(|result: &Result<T, E>| result.is_ok())
 }
 
-pub fn until<T, E, F>(f: F) -> Mulligan<T, E, F>
+/// Continues retrying the provided future until a custom condition is met.
+///
+/// # Examples
+///
+/// ```
+/// use std::time::Duration;
+///
+/// async fn this_errors(msg: &str) -> std::io::Result<()> {
+///     println!("{msg}");
+///     Err(std::io::Error::other("uh oh!"))
+/// }
+///
+/// # async fn example() {
+/// mulligan::until(|res| res.is_ok())
+///     .stop_after(5)
+///     .max_delay(Duration::from_secs(3))
+///     .full_jitter()
+///     .exponential(Duration::from_secs(1))
+///     .retry(|| async { this_errors("hello").await })
+///     .await;
+/// # }
+/// ```
+pub fn until<T, E, Cond>(f: Cond) -> Mulligan<T, E, Cond>
 where
-    F: Fn(&Result<T, E>) -> bool,
+    Cond: Fn(&Result<T, E>) -> bool,
 {
     Mulligan {
         stop_after: None,
@@ -25,6 +69,8 @@ where
         _phantom: PhantomData,
     }
 }
+
+/// Not meant to be constructed directly. Use `mulligan::until_ok()` or `mulligan::until(...)` to construct.
 pub struct Mulligan<T, E, Cond>
 where
     Cond: Fn(&Result<T, E>) -> bool,
@@ -41,42 +87,26 @@ impl<T, E, Cond> Mulligan<T, E, Cond>
 where
     Cond: Fn(&Result<T, E>) -> bool,
 {
-    pub fn stop_after(&mut self, attempts: u32) -> &mut Self {
-        self.stop_after = Some(attempts);
-        self
-    }
-    pub fn no_jitter(&mut self) -> &mut Self {
-        self.jitter = Jitter::None;
-        self
-    }
-    pub fn full_jitter(&mut self) -> &mut Self {
-        self.jitter = Jitter::Full;
-        self
-    }
-    pub fn equal_jitter(&mut self) -> &mut Self {
-        self.jitter = Jitter::Equal;
-        self
-    }
-    pub fn decorrelated_jitter(&mut self) -> &mut Self {
-        self.jitter = Jitter::Decorrelated;
-        self
-    }
-    pub fn fixed(&mut self, dur: Duration) -> &mut Self {
-        self.strategy = Strategy::Fixed(dur);
-        self
-    }
-    pub fn linear(&mut self, base: Duration) -> &mut Self {
-        self.strategy = Strategy::Linear(base);
-        self
-    }
-    pub fn exponential(&mut self, base: Duration) -> &mut Self {
-        self.strategy = Strategy::Exponential(base);
-        self
-    }
-    pub fn max_delay(&mut self, dur: Duration) -> &mut Self {
-        self.max = Some(dur);
-        self
-    }
+    /// Retries a provided future until the stopping condition has been met. The default settings will
+    /// retry forever with no delay between attempts. Backoff, Maximum Backoff, and Maximum Attempts
+    /// can be configured with the other methods on the struct.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::Duration;
+    ///
+    /// async fn this_errors(msg: &str) -> std::io::Result<()> {
+    ///     println!("{msg}");
+    ///     Err(std::io::Error::other("uh oh!"))
+    /// }
+    ///
+    /// # async fn example() {
+    /// mulligan::until_ok()
+    ///     .retry(|| async { this_errors("hello").await })
+    ///     .await;
+    /// # }
+    /// ```
     pub async fn retry<F, Fut>(&self, f: F) -> Result<T, E>
     where
         F: Fn() -> Fut + 'static,
@@ -94,16 +124,55 @@ where
                 .jitter
                 .jitter(previous, self.strategy.base(), delay, self.max);
 
-            #[cfg(feature = "tracing")]
-            tracing::debug!(
-                "Attempt {} failed. Retry again in {}.",
-                strategy.attempt(),
-                sleep_for
-            );
             Self::sleep(jittered).await;
             previous = delay;
             attempt += 1;
         }
+    }
+    /// Sets the maximum number of attempts to retry before stopping regardless of whether `until` condition has been met.
+    pub fn stop_after(&mut self, attempts: u32) -> &mut Self {
+        self.stop_after = Some(attempts);
+        self
+    }
+    /// Only delay by the calculated backoff strategy. This is the default. See `Mulligan::fixed`, `Mulligan::linear`, or `Mulligan::exponential`
+    pub fn no_jitter(&mut self) -> &mut Self {
+        self.jitter = Jitter::None;
+        self
+    }
+    /// Adjust the calculated backoff by choosing a random delay between 0 and the backoff value
+    pub fn full_jitter(&mut self) -> &mut Self {
+        self.jitter = Jitter::Full;
+        self
+    }
+    /// Adjust the calculated backoff by choosing a random delay between backoff / 2 and the backoff value
+    pub fn equal_jitter(&mut self) -> &mut Self {
+        self.jitter = Jitter::Equal;
+        self
+    }
+    /// Adjust the calculated backoff by choosing a min(max_backoff, random(base_backoff, previous_backoff * 3))
+    pub fn decorrelated_jitter(&mut self) -> &mut Self {
+        self.jitter = Jitter::Decorrelated;
+        self
+    }
+    /// Wait a fixed amount of time between each retry.
+    pub fn fixed(&mut self, dur: Duration) -> &mut Self {
+        self.strategy = Strategy::Fixed(dur);
+        self
+    }
+    /// Wait a growing amount of time between each retry `base * attempt`
+    pub fn linear(&mut self, base: Duration) -> &mut Self {
+        self.strategy = Strategy::Linear(base);
+        self
+    }
+    /// Wait a growing amount of time between each retry `base * 2.pow(attempt)`
+    pub fn exponential(&mut self, base: Duration) -> &mut Self {
+        self.strategy = Strategy::Exponential(base);
+        self
+    }
+    /// Cap the maximum amount of time between retries even when the calculated backoff is larger.
+    pub fn max_delay(&mut self, dur: Duration) -> &mut Self {
+        self.max = Some(dur);
+        self
     }
 
     #[cfg(feature = "tokio")]
@@ -141,13 +210,7 @@ impl Strategy {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Jitter {
     None,
-
-    /// Full Jitter (AWS style) - random delay between 0 and the exponential backoff value
-    /// Best for avoiding thundering herd problems
     Full,
-
-    /// Equal Jitter - half exponential backoff, half random
-    /// Good balance between retry timing consistency and collision avoidance
     Equal,
 
     /// Decorrelated Jitter - uses previous delay to calculate next one
@@ -171,8 +234,8 @@ impl Jitter {
                 rand::thread_rng().gen_range(Duration::from_micros(0)..=capped)
             }
             Self::Equal => {
-                let half = max.map_or(delay, |max| max.min(delay)) / 2;
-                rand::thread_rng().gen_range(Duration::from_micros(0)..=half)
+                let capped = max.map_or(delay, |max| max.min(delay));
+                rand::thread_rng().gen_range((capped / 2)..=capped)
             }
             Self::Decorrelated => {
                 let next = rand::thread_rng().gen_range(base..=previous * 3);
