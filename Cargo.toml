@@ -2,6 +2,11 @@
 name = "mulligan"
 version = "0.1.0"
 edition = "2021"
+description = "A flexible retry library for Rust async operations with configurable backoff strategies and jitter."
+license-file = "LICENSE"
+homepage = "https://github.com/theelderbeever/mulligan"
+repository = "https://github.com/theelderbeever/mulligan"
+documentation = "https://docs.rs/mulligan"
 
 [features]
 default = ["tokio"]  # Make tokio the default runtime
