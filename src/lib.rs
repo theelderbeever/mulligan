@@ -1,8 +1,5 @@
-#[cfg(all(feature = "tokio", feature = "async-std"))]
-compile_error!("Only one of 'tokio' or 'async-std' features can be enabled at a time");
-
 #[cfg(not(any(feature = "tokio", feature = "async-std")))]
-compile_error!("Either 'tokio' or 'async-std' feature must be enabled");
+compile_error!("At least on of 'tokio' or 'async-std' feature must be enabled");
 
 use std::{future::Future, marker::PhantomData, time::Duration};
 
@@ -179,7 +176,7 @@ where
     async fn sleep(dur: Duration) {
         tokio::time::sleep(dur).await;
     }
-    #[cfg(feature = "async-std")]
+    #[cfg(all(feature = "async-std", not(feature = "tokio")))]
     async fn sleep(dur: Duration) {
         async_std::future::sleep(dur).await;
     }

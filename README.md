@@ -73,5 +73,3 @@ Add this to your `Cargo.toml`:
 [dependencies]
 mulligan = { version = "0.1", features = ["tokio"] } # or ["async-std"]
 ```
-
-Note: You must enable either the `tokio` or `async-std` feature, but not both.
