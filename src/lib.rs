@@ -212,10 +212,6 @@ enum Jitter {
     None,
     Full,
     Equal,
-
-    /// Decorrelated Jitter - uses previous delay to calculate next one
-    /// temp = min(max, random(base, previous * 3))
-    /// Good for distributed systems to prevent synchronized retries
     Decorrelated,
 }
 
