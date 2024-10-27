@@ -5,7 +5,7 @@ async fn this_errors(msg: String) -> std::io::Result<()> {
     Err(std::io::Error::other("uh oh!"))
 }
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main()]
 async fn main() {
     let hello = tokio::spawn(async move {
         mulligan::stop_if_ok()

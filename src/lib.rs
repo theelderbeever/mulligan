@@ -11,13 +11,13 @@ use std::{future::Future, marker::PhantomData, time::Duration};
 pub use strategy::Jitter;
 use strategy::{Exponential, Fixed, Linear, Strategy};
 
-pub fn stop_if_ok<T, E>() -> Mulligan<T, E, impl Fn(&Result<T, E>) -> bool + Send + Sync> {
+pub fn stop_if_ok<T, E>() -> Mulligan<T, E, impl Fn(&Result<T, E>) -> bool> {
     stop_if(|result: &Result<T, E>| result.is_ok())
 }
 
 pub fn stop_if<T, E, F>(f: F) -> Mulligan<T, E, F>
 where
-    F: Fn(&Result<T, E>) -> bool + Send + Sync,
+    F: Fn(&Result<T, E>) -> bool,
 {
     Mulligan {
         stop_after: None,
@@ -27,7 +27,7 @@ where
 }
 pub struct Mulligan<T, E, Cond>
 where
-    Cond: Fn(&Result<T, E>) -> bool + Send + Sync,
+    Cond: Fn(&Result<T, E>) -> bool,
 {
     stop_after: Option<u32>,
     stop_if: Cond,
@@ -36,7 +36,7 @@ where
 
 impl<T, E, Cond> Mulligan<T, E, Cond>
 where
-    Cond: Fn(&Result<T, E>) -> bool + Send + Sync,
+    Cond: Fn(&Result<T, E>) -> bool,
 {
     pub fn stop_after(mut self, attempts: u32) -> Self {
         self.stop_after = Some(attempts);
@@ -45,7 +45,7 @@ where
     async fn retry<S, F, Fut>(&self, strategy: &mut S, f: F) -> Result<T, E>
     where
         S: Strategy + Send,
-        F: Fn() -> Fut + Send + Sync + 'static,
+        F: Fn() -> Fut + 'static,
         Fut: Future<Output = Result<T, E>> + Send,
     {
         loop {
@@ -76,7 +76,7 @@ where
         f: F,
     ) -> Result<T, E>
     where
-        F: Fn() -> Fut + Send + Sync + 'static,
+        F: Fn() -> Fut + 'static,
         Fut: Future<Output = Result<T, E>> + Send,
     {
         let mut strategy = Exponential::new_with_values(base, max_delay, jitter);
@@ -89,7 +89,7 @@ where
         f: F,
     ) -> Result<T, E>
     where
-        F: Fn() -> Fut + Send + Sync + 'static,
+        F: Fn() -> Fut + 'static,
         Fut: Future<Output = Result<T, E>> + Send,
     {
         let mut strategy = Linear::new_with_values(base, max_delay);
@@ -97,7 +97,7 @@ where
     }
     pub async fn fixed<F, Fut>(&self, dur: Duration, f: F) -> Result<T, E>
     where
-        F: Fn() -> Fut + Send + Sync + 'static,
+        F: Fn() -> Fut + 'static,
         Fut: Future<Output = Result<T, E>> + Send,
     {
         let mut strategy = Fixed::new_with_values(dur);
