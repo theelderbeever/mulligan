@@ -5,18 +5,27 @@
 ```rust
 use std::time::Duration;
 
-async fn this_errors(msg: String) -> std::io::Result<()> {
+async fn this_errors(msg: &str) -> std::io::Result<()> {
     println!("{msg}");
     Err(std::io::Error::other("uh oh!"))
 }
 
-mulligan::stop_if_ok()
+mulligan::until_ok()
     .stop_after(5)
-    .exponential(
-        Duration::from_secs(1),
-        Some(Duration::from_secs(3)),
-        Some(mulligan::Jitter::Full),
-        || async move { this_errors("hello".to_string()).await },
-    )
+    .max_delay(Duration::from_secs(3))
+    .full_jitter()
+    .exponential(Duration::from_secs(1))
+    .retry(|| async { this_errors("hello").await })
+    .await
+
+// Equivalent to just checking if Result::is_ok
+
+mulligan::until(|res| res.is_ok())
+    .stop_after(5)
+    .max_delay(Duration::from_secs(3))
+    .full_jitter()
+    .exponential(Duration::from_secs(1))
+    .retry(|| async { this_errors("hello").await })
     .await
 ```
+

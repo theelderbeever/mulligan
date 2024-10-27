@@ -22,10 +22,10 @@ rand = { version = "0.8", features = ["simd_support"]}
 rand = { version = "0.8"}
 
 [[example]]
-name = "exponential"
+name = "hello_world"
 required-features = ["tokio"]
 
-[example.exponential.dependencies]
+[example.hello_world.dependencies]
 tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
