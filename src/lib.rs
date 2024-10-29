@@ -63,6 +63,7 @@ where
         strategy: Strategy::Fixed(Duration::from_secs(0)),
         jitter: Jitter::None,
         max: None,
+        on_retry: None,
         _phantom: PhantomData,
     }
 }
@@ -77,6 +78,7 @@ where
     strategy: Strategy,
     jitter: Jitter,
     max: Option<Duration>,
+    on_retry: Option<Box<dyn Fn() + Send + Sync + 'static>>,
     _phantom: PhantomData<(T, E)>,
 }
 
@@ -112,6 +114,12 @@ where
         let mut previous = Duration::from_secs(0);
         let mut attempt: u32 = 0;
         loop {
+            if attempt > 0 {
+                if let Some(on_retry) = &self.on_retry {
+                    on_retry()
+                }
+            }
+
             let res = f().await;
             if self.stop_after.map_or(false, |max| attempt >= max) | (self.until)(&res) {
                 return res;
@@ -125,6 +133,14 @@ where
             previous = delay;
             attempt += 1;
         }
+    }
+    /// Sets the function to be called before each retry; it will not be called before the first execution.
+    pub fn on_retry<F>(&mut self, on_retry: F) -> &mut Self
+    where
+        F: Fn() + Send + Sync + 'static,
+    {
+        self.on_retry = Some(Box::new(on_retry));
+        self
     }
     /// Sets the maximum number of attempts to retry before stopping regardless of whether `until` condition has been met.
     pub fn stop_after(&mut self, attempts: u32) -> &mut Self {

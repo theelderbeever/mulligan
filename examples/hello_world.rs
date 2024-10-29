@@ -25,6 +25,18 @@ async fn main() {
             .await
     });
 
+    let retry = tokio::spawn(async move {
+        mulligan::until_ok()
+            .stop_after(10)
+            .full_jitter()
+            .fixed(Duration::from_millis(200))
+            .on_retry(|| { unreachable!("this on_retry() should not be called!") })
+            .on_retry(|| { println!("[retry] start to call retry()") })
+            .retry(|| async { this_errors("[retry] running").await })
+            .await
+    });
+
     let _ = hello.await;
     let _ = world.await;
+    let _ = retry.await;
 }
