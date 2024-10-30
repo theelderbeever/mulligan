@@ -30,8 +30,8 @@ async fn main() {
             .stop_after(10)
             .full_jitter()
             .fixed(Duration::from_millis(200))
-            .on_retry(|| { unreachable!("this on_retry() should not be called!") })
-            .on_retry(|| { println!("[retry] start to call retry()") })
+            .on_retry(|_, _| { unreachable!("this on_retry() should not be called!") })
+            .on_retry(|res, attempt| { println!("[retry] start to call retry(): attempt = {}, prev = {:?}", attempt, res) })
             .retry(|| async { this_errors("[retry] running").await })
             .await
     });

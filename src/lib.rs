@@ -78,7 +78,7 @@ where
     strategy: Strategy,
     jitter: Jitter,
     max: Option<Duration>,
-    on_retry: Option<Box<dyn Fn() + Send + Sync + 'static>>,
+    on_retry: Option<Box<dyn Fn(&Result<T, E>, u32) + Send + Sync + 'static>>,
     _phantom: PhantomData<(T, E)>,
 }
 
@@ -114,12 +114,6 @@ where
         let mut previous = Duration::from_secs(0);
         let mut attempt: u32 = 0;
         loop {
-            if attempt > 0 {
-                if let Some(on_retry) = &self.on_retry {
-                    on_retry()
-                }
-            }
-
             let res = f().await;
             if self.stop_after.map_or(false, |max| attempt >= max) | (self.until)(&res) {
                 return res;
@@ -131,13 +125,23 @@ where
 
             Self::sleep(jittered).await;
             previous = delay;
+
+            if let Some(on_retry) = &self.on_retry {
+                on_retry(&res, attempt);
+            }
+
             attempt += 1;
         }
     }
-    /// Sets the function to be called before each retry; it will not be called before the first execution.
+    /// Sets the function to be called before each retry;
+    /// it will not be called before the first execution.
+    ///
+    /// For the incoming function, the first parameter represents
+    /// the result of the last execution, and the second parameter
+    /// represents the number of times it has been executed.
     pub fn on_retry<F>(&mut self, on_retry: F) -> &mut Self
     where
-        F: Fn() + Send + Sync + 'static,
+        F: Fn(&Result<T, E>, u32) + Send + Sync + 'static,
     {
         self.on_retry = Some(Box::new(on_retry));
         self
