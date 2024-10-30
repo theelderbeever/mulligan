@@ -30,7 +30,6 @@ async fn main() {
             .stop_after(10)
             .full_jitter()
             .fixed(Duration::from_millis(200))
-            .on_retry(|_, _| { unreachable!("this on_retry() should not be called!") })
             .on_retry(|res, attempt| { println!("[retry] start to call retry(): attempt = {}, prev = {:?}", attempt, res) })
             .retry(|| async { this_errors("[retry] running").await })
             .await
@@ -39,4 +38,14 @@ async fn main() {
     let _ = hello.await;
     let _ = world.await;
     let _ = retry.await;
+
+    let _ = tokio::spawn(async move {
+        mulligan::until_ok()
+            .stop_after(3)
+            .full_jitter()
+            .fixed(Duration::from_millis(200))
+            .on_retry(|res, attempt| { println!("[on_retry] start to call retry() again. In last attempt = {}, result = {:?}", attempt, res) })
+            .retry(|| async { this_errors("[retry] call `.retry()` and failed").await })
+            .await
+    }).await;
 }
