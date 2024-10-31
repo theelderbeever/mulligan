@@ -19,7 +19,7 @@ async fn main() {
     let world = tokio::spawn(async move {
         mulligan::until(|r| r.is_ok())
             .stop_after(10)
-            .full_jitter()
+            .jitter(mulligan::jitter::Full)
             .fixed(Duration::from_secs(1))
             .retry(|| async { this_errors("world").await })
             .await
