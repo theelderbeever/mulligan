@@ -1,9 +1,10 @@
-name: Rust
+name: Pull Request
 
 on:
   pull_request:
     types:
       - opened
+      - synchronize
     paths:
       - Cargo.toml
       - '**/Cargo.toml'
@@ -35,6 +36,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: rust-toolchain-cache
+      - name: Version Check
+        run: cargo fmt --version
       - name: Enforce formatting
         run: cargo fmt --check
 
@@ -49,7 +52,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: rust-toolchain-cache
-      - name: Linting
+      - name: Version Check
         run: cargo clippy --version
       - name: Linting
         run: cargo clippy --all-targets -- -D warnings
