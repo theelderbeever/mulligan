@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 #[cfg(not(any(feature = "tokio", feature = "async-std")))]
 compile_error!("At least on of 'tokio' or 'async-std' feature must be enabled");
 
