@@ -131,7 +131,6 @@ where
             let jittered = self.jitterable.jitter(delay, self.max);
 
             Self::sleep(jittered).await;
-            previous = delay;
 
             if let Some(on_retry) = &self.on_retry {
                 on_retry(&res, attempt);
@@ -146,7 +145,7 @@ where
     /// For the incoming function, the first parameter represents
     /// the result of the last execution, and the second parameter
     /// represents the number of times it has been executed.
-    pub fn on_retry<F>(&mut self, on_retry: F) -> &mut Self
+    pub fn on_retry<F>(mut self, on_retry: F) -> Self
     where
         F: Fn(&Result<T, E>, u32) + Send + Sync + 'static,
     {
@@ -169,6 +168,7 @@ where
             backoff: self.backoff,
             jitterable: jitter,
             max: self.max,
+            on_retry: self.on_retry,
             _phantom: PhantomData,
         }
     }
@@ -180,6 +180,7 @@ where
             backoff: self.backoff,
             jitterable: jitter::Full,
             max: self.max,
+            on_retry: self.on_retry,
             _phantom: PhantomData,
         }
     }
@@ -191,6 +192,7 @@ where
             backoff: self.backoff,
             jitterable: jitter::Equal,
             max: self.max,
+            on_retry: self.on_retry,
             _phantom: PhantomData,
         }
     }
@@ -205,6 +207,7 @@ where
             backoff: self.backoff,
             jitterable: jitter::Decorrelated::base(base),
             max: self.max,
+            on_retry: self.on_retry,
             _phantom: PhantomData,
         }
     }
@@ -218,6 +221,7 @@ where
             backoff,
             jitterable: self.jitterable,
             max: self.max,
+            on_retry: self.on_retry,
             _phantom: PhantomData,
         }
     }
@@ -229,6 +233,7 @@ where
             backoff: Fixed::base(dur),
             jitterable: self.jitterable,
             max: self.max,
+            on_retry: self.on_retry,
             _phantom: PhantomData,
         }
     }
@@ -240,6 +245,7 @@ where
             backoff: Linear::base(dur),
             jitterable: self.jitterable,
             max: self.max,
+            on_retry: self.on_retry,
             _phantom: PhantomData,
         }
     }
@@ -251,6 +257,7 @@ where
             backoff: Exponential::base(dur),
             jitterable: self.jitterable,
             max: self.max,
+            on_retry: self.on_retry,
             _phantom: PhantomData,
         }
     }
