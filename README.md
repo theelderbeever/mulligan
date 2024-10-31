@@ -24,6 +24,34 @@ A flexible retry library for Rust async operations with configurable backoff str
   - `tokio` (via `tokio` feature)
   - `async-std` (via `async-std` feature)
 
+## Contributing
+
+Formatting and linting hooks are run via `pre-commit` and will run prior to each commit. If the hooks fail they will reject the commit. The `end-of-file-fixer` and `trailing-whitespace` will automatically make the necessary fixes and you can just `git add ... && git commit -m ...` again immediately. The `fmt` and `clippy` lints will require your intervention.
+
+If you _MUST_ bypass the commit hooks to get things on a branch you can `git commit --no-verify -m ...` to skip the hooks.
+
+```
+brew install pre-commit
+
+pre-commit install
+```
+
+```yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+      - id: clippy
+        args: [ --all-targets, --, -D, clippy::all ]
+```
+
 ## Quick Start
 
 ```rust
