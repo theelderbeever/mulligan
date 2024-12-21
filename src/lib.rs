@@ -29,7 +29,7 @@ pub use jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
 ///     .max_delay(Duration::from_secs(3))
 ///     .full_jitter()
 ///     .exponential(Duration::from_secs(1))
-///     .retry(|| async { this_errors("hello").await })
+///     .execute(|| async { this_errors("hello").await })
 ///     .await;
 /// # }
 /// ```
@@ -55,7 +55,7 @@ pub fn until_ok<T, E>() -> Mulligan<T, E, impl Fn(&Result<T, E>) -> bool, NoJitt
 ///     .max_delay(Duration::from_secs(3))
 ///     .full_jitter()
 ///     .exponential(Duration::from_secs(1))
-///     .retry(|| async { this_errors("hello").await })
+///     .execute(|| async { this_errors("hello").await })
 ///     .await;
 /// # }
 /// ```
@@ -114,7 +114,7 @@ where
     ///
     /// # async fn example() {
     /// mulligan::until_ok()
-    ///     .retry(|| async { this_errors("hello").await })
+    ///     .execute(|| async { this_errors("hello").await })
     ///     .await;
     /// # }
     /// ```
@@ -155,15 +155,15 @@ where
     /// ```
     /// use std::time::Duration;
     ///
-    /// async fn this_errors(msg: &str) -> std::io::Result<()> {
+    /// fn this_errors(msg: &str) -> std::io::Result<()> {
     ///     println!("{msg}");
     ///     Err(std::io::Error::other("uh oh!"))
     /// }
     ///
     /// # async fn example() {
     /// mulligan::until_ok()
-    ///     .retry(|| async { this_errors("hello").await })
-    ///     .await;
+    ///     .stop_after(2)
+    ///     .execute_sync(move || { this_errors("hello") });
     /// # }
     /// ```
     pub fn execute_sync<F>(mut self, f: F) -> Result<T, E>
