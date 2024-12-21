@@ -1,6 +1,6 @@
 [package]
 name = "mulligan"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "A flexible retry library for Rust async operations with configurable backoff strategies and jitter."
 license = "MIT"
@@ -14,7 +14,7 @@ tokio = ["dep:tokio"]  # Depend on tokio when this feature is enabled
 async-std = ["dep:async-std"]  # Depend on async-std when this feature is enabled
 
 [dependencies]
-tokio = { version = "1", optional = true, features = ["time","rt"] }
+tokio = { version = "1", optional = true, features = ["time"] }
 async-std = { version = "1", optional = true }
 rand = { version = "0.8"}
 
