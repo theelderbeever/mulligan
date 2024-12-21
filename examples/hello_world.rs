@@ -13,7 +13,7 @@ async fn main() {
             .max_delay(Duration::from_secs(3))
             .full_jitter()
             .exponential(Duration::from_secs(1))
-            .retry(|| async { this_errors("hello").await })
+            .execute(|| async { this_errors("hello").await })
             .await
     });
     let world = tokio::spawn(async move {
@@ -21,7 +21,7 @@ async fn main() {
             .stop_after(10)
             .jitter(mulligan::jitter::Full)
             .fixed(Duration::from_secs(1))
-            .retry(|| async { this_errors("world").await })
+            .execute(|| async { this_errors("world").await })
             .await
     });
 
@@ -30,13 +30,8 @@ async fn main() {
             .stop_after(10)
             .full_jitter()
             .fixed(Duration::from_millis(200))
-            .on_retry(|res, attempt| {
-                println!(
-                    "[retry] start to call retry(): attempt = {}, prev = {:?}",
-                    attempt, res
-                )
-            })
-            .retry(|| async { this_errors("[retry] running").await })
+            .after_attempt(|res, attempt| println!("Attempt = {}, result = {:?}", attempt, res))
+            .execute(|| async { this_errors("Oh uh!!!").await })
             .await
     });
 
@@ -49,13 +44,8 @@ async fn main() {
             .stop_after(3)
             .full_jitter()
             .fixed(Duration::from_millis(200))
-            .on_retry(|res, attempt| {
-                println!(
-                    "[on_retry] start to call retry() again. In last attempt = {}, result = {:?}",
-                    attempt, res
-                )
-            })
-            .retry(|| async { this_errors("[retry] call `.retry()` and failed").await })
+            .after_attempt(|res, attempt| println!("Attempt = {}, result = {:?}", attempt, res))
+            .execute(|| async { this_errors("Uh oh!!!").await })
             .await
     })
     .await;

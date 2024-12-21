@@ -69,7 +69,7 @@ async fn main() {
         .max_delay(Duration::from_secs(3)) // Cap maximum delay at 3 seconds
         .exponential(Duration::from_secs(1)) // Use exponential backoff
         .full_jitter()                     // Add randomized jitter
-        .retry(|| async {
+        .execute(|| async {
             fallible_operation("connection failed").await
         })
         .await;
@@ -86,11 +86,11 @@ async fn main() {
         .max_delay(Duration::from_secs(3)) // Cap maximum delay at 3 seconds
         .exponential(Duration::from_secs(1)) // Use exponential backoff
         .full_jitter()                     // Add randomized jitter
-        .on_retry(|prev, attempts| {       // Run before each retry.
+        .after_attempt(|prev, attempts| {       // Run before each retry.
             println!("In the {}-th attempt, the returned result is {:?}.", attempts, prev);
             println!("Start next attempt");
         })
-        .retry(|| async {
+        .execute(|| async {
             fallible_operation("connection failed").await
         })
         .await;
