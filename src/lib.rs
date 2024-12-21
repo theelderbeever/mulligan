@@ -8,8 +8,8 @@ pub mod jitter;
 
 use std::{future::Future, marker::PhantomData, time::Duration};
 
-use backoff::{Backoff, Exponential, Fixed, Linear};
-use jitter::NoJitter;
+pub use backoff::{Backoff, Exponential, Fixed, Linear};
+pub use jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
 
 /// Continues retrying the provided future until a successful result is obtained.
 ///
@@ -157,7 +157,7 @@ where
         self.stop_after = Some(attempts);
         self
     }
-    /// Only delay by the calculated backoff strategy. This is the default. See `Mulligan::fixed`, `Mulligan::linear`, or `Mulligan::exponential`
+    /// Adjust the backoff by the provided jitter strategy
     pub fn jitter<J>(self, jitter: J) -> Mulligan<T, E, Cond, J, Back>
     where
         J: jitter::Jitter,
@@ -211,6 +211,7 @@ where
             _phantom: PhantomData,
         }
     }
+    /// Delay by the calculated backoff strategy.
     pub fn backoff<B>(self, backoff: B) -> Mulligan<T, E, Cond, Jit, B>
     where
         B: Backoff,
