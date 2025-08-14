@@ -13,7 +13,7 @@ async fn main() {
             .max_delay(Duration::from_secs(3))
             .full_jitter()
             .exponential(Duration::from_secs(1))
-            .execute(|| async { this_errors("hello").await })
+            .execute(async move || this_errors("hello").await)
             .await
     });
     let world = tokio::spawn(async move {
@@ -21,7 +21,7 @@ async fn main() {
             .stop_after(10)
             .jitter(mulligan::jitter::Full)
             .fixed(Duration::from_secs(1))
-            .execute(|| async { this_errors("world").await })
+            .execute(async move || this_errors("world").await)
             .await
     });
 
@@ -30,8 +30,8 @@ async fn main() {
             .stop_after(10)
             .full_jitter()
             .fixed(Duration::from_millis(200))
-            .after_attempt(|res, attempt| println!("Attempt = {}, result = {:?}", attempt, res))
-            .execute(|| async { this_errors("Oh uh!!!").await })
+            .after_attempt(|res, attempt| println!("Attempt = {attempt}, result = {res:?}"))
+            .execute(async move || this_errors("Oh uh!!!").await)
             .await
     });
 
@@ -44,8 +44,8 @@ async fn main() {
             .stop_after(3)
             .full_jitter()
             .fixed(Duration::from_millis(200))
-            .after_attempt(|res, attempt| println!("Attempt = {}, result = {:?}", attempt, res))
-            .execute(|| async { this_errors("Uh oh!!!").await })
+            .after_attempt(|res, attempt| println!("Attempt = {attempt}, result = {res:?}"))
+            .execute(async move || this_errors("Uh oh!!!").await)
             .await
     })
     .await;
