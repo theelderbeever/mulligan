@@ -6,7 +6,7 @@ compile_error!("At least on of 'tokio' or 'async-std' feature must be enabled");
 pub mod backoff;
 pub mod jitter;
 
-use std::{future::Future, marker::PhantomData, time::Duration};
+use std::{marker::PhantomData, time::Duration};
 
 pub use backoff::{Backoff, Exponential, Fixed, Linear};
 pub use jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
@@ -118,10 +118,9 @@ where
     ///     .await;
     /// # }
     /// ```
-    pub async fn execute<F, Fut>(mut self, f: F) -> Result<T, E>
+    pub async fn execute<F>(mut self, mut f: F) -> Result<T, E>
     where
-        F: Fn() -> Fut + 'static,
-        Fut: Future<Output = Result<T, E>> + Send,
+        F: AsyncFnMut() -> Result<T, E> + 'static,
     {
         let mut attempt: u32 = 0;
         loop {
@@ -131,7 +130,7 @@ where
 
             let res = f().await;
 
-            if self.stop_after.map_or(false, |max| attempt >= max) | (self.until)(&res) {
+            if self.stop_after.is_some_and(|max| attempt >= max) | (self.until)(&res) {
                 return res;
             }
 
@@ -166,9 +165,9 @@ where
     ///     .execute_sync(move || { this_errors("hello") });
     /// # }
     /// ```
-    pub fn execute_sync<F>(mut self, f: F) -> Result<T, E>
+    pub fn execute_sync<F>(mut self, mut f: F) -> Result<T, E>
     where
-        F: Fn() -> Result<T, E>,
+        F: FnMut() -> Result<T, E>,
     {
         let mut attempt: u32 = 0;
         loop {
@@ -178,7 +177,7 @@ where
 
             let res = f();
 
-            if self.stop_after.map_or(false, |max| attempt >= max) | (self.until)(&res) {
+            if self.stop_after.is_some_and(|max| attempt >= max) | (self.until)(&res) {
                 return res;
             }
 
