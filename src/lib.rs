@@ -118,9 +118,9 @@ where
     ///     .await;
     /// # }
     /// ```
-    pub async fn execute<F>(mut self, mut f: F) -> Result<T, E>
+    pub async fn execute<F>(mut self, f: F) -> Result<T, E>
     where
-        F: AsyncFnMut() -> Result<T, E> + 'static,
+        F: AsyncFn() -> Result<T, E> + 'static,
     {
         let mut attempt: u32 = 0;
         loop {
@@ -165,9 +165,9 @@ where
     ///     .execute_sync(move || { this_errors("hello") });
     /// # }
     /// ```
-    pub fn execute_sync<F>(mut self, mut f: F) -> Result<T, E>
+    pub fn execute_sync<F>(mut self, f: F) -> Result<T, E>
     where
-        F: FnMut() -> Result<T, E>,
+        F: Fn() -> Result<T, E>,
     {
         let mut attempt: u32 = 0;
         loop {
