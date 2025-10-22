@@ -33,7 +33,8 @@ pub use jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
 ///     .await;
 /// # }
 /// ```
-pub fn until_ok<T, E>() -> Mulligan<T, E, impl Fn(&Result<T, E>) -> bool, NoJitter, Fixed> {
+pub fn until_ok<T, E>() -> Mulligan<'static, T, E, impl Fn(&Result<T, E>) -> bool, NoJitter, Fixed>
+{
     until::<T, E, _>(|result: &Result<T, E>| result.is_ok())
 }
 
@@ -59,7 +60,7 @@ pub fn until_ok<T, E>() -> Mulligan<T, E, impl Fn(&Result<T, E>) -> bool, NoJitt
 ///     .await;
 /// # }
 /// ```
-pub fn until<T, E, Cond>(f: Cond) -> Mulligan<T, E, Cond, NoJitter, Fixed>
+pub fn until<T, E, Cond>(f: Cond) -> Mulligan<'static, T, E, Cond, NoJitter, Fixed>
 where
     Cond: Fn(&Result<T, E>) -> bool,
 {
@@ -76,7 +77,7 @@ where
 }
 
 /// Not meant to be constructed directly. Use `mulligan::until_ok()` or `mulligan::until(...)` to construct.
-pub struct Mulligan<T, E, Cond, Jit, Back>
+pub struct Mulligan<'a, T, E, Cond, Jit, Back>
 where
     Cond: Fn(&Result<T, E>) -> bool,
     Jit: jitter::Jitter,
@@ -87,12 +88,12 @@ where
     backoff: Back,
     jitterable: Jit,
     max: Option<Duration>,
-    before_attempt: Option<Box<dyn Fn(u32) + Send + Sync>>,
-    after_attempt: Option<Box<dyn Fn(&Result<T, E>, u32) + Send + Sync>>,
+    before_attempt: Option<Box<dyn Fn(u32) + Send + Sync + 'a>>,
+    after_attempt: Option<Box<dyn Fn(&Result<T, E>, u32) + Send + Sync + 'a>>,
     _phantom: PhantomData<(T, E)>,
 }
 
-impl<T, E, Cond, Jit, Back> Mulligan<T, E, Cond, Jit, Back>
+impl<'a, T, E, Cond, Jit, Back> Mulligan<'a, T, E, Cond, Jit, Back>
 where
     Cond: Fn(&Result<T, E>) -> bool,
     Jit: jitter::Jitter,
@@ -199,7 +200,7 @@ where
     /// represents the number of times it has been executed.
     pub fn before_attempt<F>(mut self, before_attempt: F) -> Self
     where
-        F: Fn(u32) + Send + Sync + 'static,
+        F: Fn(u32) + Send + Sync + 'a,
     {
         self.before_attempt = Some(Box::new(before_attempt));
         self
@@ -212,7 +213,7 @@ where
     /// represents the number of times it has been executed.
     pub fn after_attempt<F>(mut self, after_attempt: F) -> Self
     where
-        F: Fn(&Result<T, E>, u32) + Send + Sync + 'static,
+        F: Fn(&Result<T, E>, u32) + Send + Sync + 'a,
     {
         self.after_attempt = Some(Box::new(after_attempt));
         self
@@ -227,7 +228,7 @@ where
         self.jitterable.jitter(delay, self.max)
     }
     /// Adjust the backoff by the provided jitter strategy
-    pub fn jitter<J>(self, jitter: J) -> Mulligan<T, E, Cond, J, Back>
+    pub fn jitter<J>(self, jitter: J) -> Mulligan<'a, T, E, Cond, J, Back>
     where
         J: jitter::Jitter,
     {
@@ -243,7 +244,7 @@ where
         }
     }
     /// Adjust the calculated backoff by choosing a random delay between 0 and the backoff value
-    pub fn full_jitter(self) -> Mulligan<T, E, Cond, jitter::Full, Back> {
+    pub fn full_jitter(self) -> Mulligan<'a, T, E, Cond, jitter::Full, Back> {
         Mulligan {
             stop_after: self.stop_after,
             until: self.until,
@@ -256,7 +257,7 @@ where
         }
     }
     /// Adjust the calculated backoff by choosing a random delay between backoff / 2 and the backoff value
-    pub fn equal_jitter(self) -> Mulligan<T, E, Cond, jitter::Equal, Back> {
+    pub fn equal_jitter(self) -> Mulligan<'a, T, E, Cond, jitter::Equal, Back> {
         Mulligan {
             stop_after: self.stop_after,
             until: self.until,
@@ -272,7 +273,7 @@ where
     pub fn decorrelated_jitter(
         self,
         base: Duration,
-    ) -> Mulligan<T, E, Cond, jitter::Decorrelated, Back> {
+    ) -> Mulligan<'a, T, E, Cond, jitter::Decorrelated, Back> {
         Mulligan {
             stop_after: self.stop_after,
             until: self.until,
@@ -285,7 +286,7 @@ where
         }
     }
     /// Delay by the calculated backoff strategy.
-    pub fn backoff<B>(self, backoff: B) -> Mulligan<T, E, Cond, Jit, B>
+    pub fn backoff<B>(self, backoff: B) -> Mulligan<'a, T, E, Cond, Jit, B>
     where
         B: Backoff,
     {
@@ -301,7 +302,7 @@ where
         }
     }
     /// Wait a fixed amount of time between each retry.
-    pub fn fixed(self, dur: Duration) -> Mulligan<T, E, Cond, Jit, Fixed> {
+    pub fn fixed(self, dur: Duration) -> Mulligan<'a, T, E, Cond, Jit, Fixed> {
         Mulligan {
             stop_after: self.stop_after,
             until: self.until,
@@ -314,7 +315,7 @@ where
         }
     }
     /// Wait a growing amount of time between each retry `base * attempt`
-    pub fn linear(self, dur: Duration) -> Mulligan<T, E, Cond, Jit, Linear> {
+    pub fn linear(self, dur: Duration) -> Mulligan<'a, T, E, Cond, Jit, Linear> {
         Mulligan {
             stop_after: self.stop_after,
             until: self.until,
@@ -327,7 +328,7 @@ where
         }
     }
     /// Wait a growing amount of time between each retry `base * 2.pow(attempt)`
-    pub fn exponential(self, dur: Duration) -> Mulligan<T, E, Cond, Jit, Exponential> {
+    pub fn exponential(self, dur: Duration) -> Mulligan<'a, T, E, Cond, Jit, Exponential> {
         Mulligan {
             stop_after: self.stop_after,
             until: self.until,
