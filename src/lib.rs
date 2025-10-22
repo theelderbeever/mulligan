@@ -114,7 +114,7 @@ where
     ///
     /// # async fn example() {
     /// mulligan::until_ok()
-    ///     .execute(|| async { this_errors("hello").await })
+    ///     .execute(async { this_errors("hello").await })
     ///     .await;
     /// # }
     /// ```

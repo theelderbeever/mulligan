@@ -69,7 +69,7 @@ async fn main() {
         .max_delay(Duration::from_secs(3)) // Cap maximum delay at 3 seconds
         .exponential(Duration::from_secs(1)) // Use exponential backoff
         .full_jitter()                     // Add randomized jitter
-        .execute(|| async {
+        .execute(async {
             fallible_operation("connection failed").await
         })
         .await;
@@ -90,7 +90,7 @@ async fn main() {
             println!("In the {}-th attempt, the returned result is {:?}.", attempts, prev);
             println!("Start next attempt");
         })
-        .execute(|| async {
+        .execute(async {
             fallible_operation("connection failed").await
         })
         .await;
