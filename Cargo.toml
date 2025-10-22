@@ -23,8 +23,6 @@ rand = { version = "0.8" }
 name = "hello_world"
 required-features = ["tokio"]
 
-
-
 [[example]]
 name = "reqwest"
 required-features = ["tokio"]
