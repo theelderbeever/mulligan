@@ -29,7 +29,7 @@ pub use jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
 ///     .max_delay(Duration::from_secs(3))
 ///     .full_jitter()
 ///     .exponential(Duration::from_secs(1))
-///     .execute(|| async { this_errors("hello").await })
+///     .execute(async || { this_errors("hello").await })
 ///     .await;
 /// # }
 /// ```
@@ -55,7 +55,7 @@ pub fn until_ok<T, E>() -> Mulligan<T, E, impl Fn(&Result<T, E>) -> bool, NoJitt
 ///     .max_delay(Duration::from_secs(3))
 ///     .full_jitter()
 ///     .exponential(Duration::from_secs(1))
-///     .execute(|| async { this_errors("hello").await })
+///     .execute(async || { this_errors("hello").await })
 ///     .await;
 /// # }
 /// ```
@@ -87,8 +87,8 @@ where
     backoff: Back,
     jitterable: Jit,
     max: Option<Duration>,
-    before_attempt: Option<Box<dyn Fn(u32) + Send + Sync + 'static>>,
-    after_attempt: Option<Box<dyn Fn(&Result<T, E>, u32) + Send + Sync + 'static>>,
+    before_attempt: Option<Box<dyn Fn(u32) + Send + Sync>>,
+    after_attempt: Option<Box<dyn Fn(&Result<T, E>, u32) + Send + Sync>>,
     _phantom: PhantomData<(T, E)>,
 }
 
@@ -114,13 +114,13 @@ where
     ///
     /// # async fn example() {
     /// mulligan::until_ok()
-    ///     .execute(|| async { this_errors("hello").await })
+    ///     .execute(async { this_errors("hello").await })
     ///     .await;
     /// # }
     /// ```
     pub async fn execute<F>(mut self, f: F) -> Result<T, E>
     where
-        F: AsyncFn() -> Result<T, E> + 'static,
+        F: AsyncFn() -> Result<T, E>,
     {
         let mut attempt: u32 = 0;
         loop {

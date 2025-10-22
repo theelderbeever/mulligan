@@ -1,6 +1,6 @@
 [package]
 name = "mulligan"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "A flexible retry library for Rust async operations with configurable backoff strategies and jitter."
 license = "MIT"
@@ -23,8 +23,17 @@ rand = { version = "0.8" }
 name = "hello_world"
 required-features = ["tokio"]
 
-[example.hello_world.dependencies]
-tokio = { version = "1", features = ["full"] }
+
+
+[[example]]
+name = "reqwest"
+required-features = ["tokio"]
+
+
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde_json = "1.0"
+log = "0.4"
+env_logger = "0.11"
