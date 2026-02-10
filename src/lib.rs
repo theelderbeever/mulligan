@@ -33,9 +33,8 @@ pub use jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
 ///     .await;
 /// # }
 /// ```
-pub fn until_ok<T, E>() -> Mulligan<'static, T, E, impl Fn(&Result<T, E>) -> bool, NoJitter, Fixed>
-{
-    until::<T, E, _>(|result: &Result<T, E>| result.is_ok())
+pub fn until_ok<'a, T, E>() -> Mulligan<'a, T, E, impl Fn(&Result<T, E>) -> bool, NoJitter, Fixed> {
+    until::<'a, T, E, _>(|result: &Result<T, E>| result.is_ok())
 }
 
 /// Continues retrying the provided future until a custom condition is met.
@@ -60,7 +59,7 @@ pub fn until_ok<T, E>() -> Mulligan<'static, T, E, impl Fn(&Result<T, E>) -> boo
 ///     .await;
 /// # }
 /// ```
-pub fn until<T, E, Cond>(f: Cond) -> Mulligan<'static, T, E, Cond, NoJitter, Fixed>
+pub fn until<'a, T, E, Cond>(f: Cond) -> Mulligan<'a, T, E, Cond, NoJitter, Fixed>
 where
     Cond: Fn(&Result<T, E>) -> bool,
 {
@@ -115,7 +114,7 @@ where
     ///
     /// # async fn example() {
     /// mulligan::until_ok()
-    ///     .execute(async { this_errors("hello").await })
+    ///     .execute(async || this_errors("hello").await)
     ///     .await;
     /// # }
     /// ```
