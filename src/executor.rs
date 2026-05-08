@@ -107,7 +107,7 @@ where
     ///
     /// # async fn example() {
     /// mulligan::until_ok()
-    ///     .execute(async { this_errors("hello").await })
+    ///     .execute(async || { this_errors("hello").await })
     ///     .await;
     /// # }
     /// ```
@@ -341,9 +341,5 @@ where
     #[cfg(feature = "tokio")]
     async fn sleep(dur: Duration) {
         tokio::time::sleep(dur).await;
-    }
-    #[cfg(all(feature = "async-std", not(feature = "tokio")))]
-    async fn sleep(dur: Duration) {
-        async_std::future::sleep(dur).await;
     }
 }
