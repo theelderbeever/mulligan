@@ -65,7 +65,7 @@ async fn fallible_operation(msg: &str) -> std::io::Result<()> {
 #[tokio::main]
 async fn main() {
     let result = mulligan::until_ok()
-        .stop_after(5)                     // Try up to 5 times
+        .stop_after(5)                     // Retry up to 5 times after the initial attempt
         .max_delay(Duration::from_secs(3)) // Cap maximum delay at 3 seconds
         .exponential(Duration::from_secs(1)) // Use exponential backoff
         .full_jitter()                     // Add randomized jitter
@@ -82,7 +82,7 @@ Alternatively, you may provide a custom stopping condition. `mulligan::until_ok(
 #[tokio::main]
 async fn main() {
     let result = mulligan::until(|res| res.is_ok())
-        .stop_after(5)                     // Try up to 5 times
+        .stop_after(5)                     // Retry up to 5 times after the initial attempt
         .max_delay(Duration::from_secs(3)) // Cap maximum delay at 3 seconds
         .exponential(Duration::from_secs(1)) // Use exponential backoff
         .full_jitter()                     // Add randomized jitter

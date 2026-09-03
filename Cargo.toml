@@ -13,11 +13,13 @@ rust-version = "1.85"
 default = ["tokio"]           # Make tokio the default runtime
 tokio = ["dep:tokio"]         # Depend on tokio when this feature is enabled
 async-std = ["dep:async-std"] # Depend on async-std when this feature is enabled
+iter = ["dep:futures-core"]   # Async retry-attempt interface
 
 [dependencies]
 tokio = { version = "1", optional = true, features = ["time"] }
 async-std = { version = "1", optional = true }
 rand = { version = "0.8" }
+futures-core = { version = "0.3", optional = true }
 
 [[example]]
 name = "hello_world"
@@ -27,7 +29,9 @@ required-features = ["tokio"]
 name = "reqwest"
 required-features = ["tokio"]
 
-
+[[example]]
+name = "iter"
+required-features = ["iter"]
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -35,3 +39,4 @@ reqwest = { version = "0.12", features = ["json"] }
 serde_json = "1.0"
 log = "0.4"
 env_logger = "0.11"
+futures = "0.3"
