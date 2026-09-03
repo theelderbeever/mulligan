@@ -152,4 +152,6 @@ let policy: RetryPolicy<Exponential, Full> = serde_json::from_str(r#"{
 
 Stateless jitter strategies (`NoJitter`, `Full`, and `Equal`) default to their
 selected type and may be omitted. For `Decorrelated`, set `jitter` to its base
-duration, for example `"jitter": "100ms"`.
+duration, for example `"jitter": "100ms"`. See
+[`examples/retry_policy.toml`](examples/retry_policy.toml) for an equivalent
+TOML configuration.
