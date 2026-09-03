@@ -1,0 +1,8 @@
+[workspace]
+# Publishing is intentionally handled only by the release/* workflow. This must
+# stay enabled because release-plz is not invoked from a merged release-plz PR.
+release_always = true
+changelog_update = true
+git_release_enable = true
+git_tag_enable = true
+semver_check = true
