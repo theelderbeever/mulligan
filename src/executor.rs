@@ -15,6 +15,7 @@ pub use crate::jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
 ///     Err(std::io::Error::other("uh oh!"))
 /// }
 ///
+/// # #[cfg(any(feature = "tokio", feature = "async-std"))]
 /// # async fn example() {
 /// mulligan::until_ok()
 ///     .stop_after(5)
@@ -42,6 +43,7 @@ pub fn until_ok<T, E>() -> Mulligan<'static, T, E, impl Fn(&Result<T, E>) -> boo
 ///     Err(std::io::Error::other("uh oh!"))
 /// }
 ///
+/// # #[cfg(any(feature = "tokio", feature = "async-std"))]
 /// # async fn example() {
 /// mulligan::until(|res| res.is_ok())
 ///     .stop_after(5)
@@ -92,7 +94,7 @@ where
     Back: crate::backoff::Backoff,
 {
     /// Retries a provided future until the stopping condition has been met. The default settings will
-    /// retry forever with no delay between attempts. Backoff, Maximum Backoff, and Maximum Attempts
+    /// retry forever with no delay between attempts. Backoff, Maximum Backoff, and Maximum Retries
     /// can be configured with the other methods on the struct.
     ///
     /// # Examples
@@ -111,6 +113,7 @@ where
     ///     .await;
     /// # }
     /// ```
+    #[cfg(any(feature = "tokio", feature = "async-std"))]
     pub async fn execute<F>(mut self, f: F) -> Result<T, E>
     where
         F: AsyncFn() -> Result<T, E>,
@@ -139,7 +142,7 @@ where
         }
     }
     /// Retries a provided function until the stopping condition has been met. The default settings will
-    /// retry forever with no delay between attempts. Backoff, Maximum Backoff, and Maximum Attempts
+    /// retry forever with no delay between attempts. Backoff, Maximum Backoff, and Maximum Retries
     /// can be configured with the other methods on the struct.
     ///
     /// # Examples
@@ -210,9 +213,9 @@ where
         self.after_attempt = Some(Box::new(after_attempt));
         self
     }
-    /// Sets the maximum number of attempts to retry before stopping regardless of whether `until` condition has been met.
-    pub fn stop_after(mut self, attempts: u32) -> Self {
-        self.stop_after = Some(attempts);
+    /// Sets the maximum number of retries after the initial attempt.
+    pub fn stop_after(mut self, retries: u32) -> Self {
+        self.stop_after = Some(retries);
         self
     }
     fn calculate_delay(&mut self, attempt: u32) -> Duration {
@@ -341,5 +344,28 @@ where
     #[cfg(feature = "tokio")]
     async fn sleep(dur: Duration) {
         tokio::time::sleep(dur).await;
+    }
+    #[cfg(all(feature = "async-std", not(feature = "tokio")))]
+    async fn sleep(dur: Duration) {
+        async_std::task::sleep(dur).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::Cell;
+
+    use super::until_ok;
+
+    #[test]
+    fn stop_after_limits_retries_after_the_initial_attempt() {
+        let calls = Cell::new(0);
+
+        let _: Result<(), ()> = until_ok().stop_after(3).execute_sync(|| {
+            calls.set(calls.get() + 1);
+            Err(())
+        });
+
+        assert_eq!(calls.get(), 4);
     }
 }

@@ -4,7 +4,7 @@ use futures::StreamExt;
 
 #[tokio::main]
 async fn main() {
-    // Async — using StreamExt combinators
+    // Async — initial attempt followed by up to four retries
     println!("=== Async Stream (for_each) ===");
     mulligan::iter()
         .stop_after(4)
@@ -16,7 +16,7 @@ async fn main() {
         })
         .await;
 
-    // Async — using while let
+    // Async — initial attempt followed by up to three retries
     println!("\n=== Async Stream (while let) ===");
     let mut stream = mulligan::iter()
         .stop_after(3)
@@ -25,7 +25,7 @@ async fn main() {
         println!("  attempt {attempt}");
     }
 
-    // Sync — for loop
+    // Sync — initial attempt followed by up to three retries
     println!("\n=== Sync Iterator (for loop) ===");
     for attempt in mulligan::blocking::iter()
         .stop_after(3)
