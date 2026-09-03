@@ -760,7 +760,7 @@ dependencies = [
 
 [[package]]
 name = "mulligan"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "env_logger",
  "futures",
