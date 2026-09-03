@@ -5,7 +5,7 @@ A flexible retry library for Rust async operations with configurable backoff str
 [![Crates.io](https://img.shields.io/crates/v/mulligan.svg)](https://crates.io/crates/mulligan)
 [![Documentation](https://docs.rs/mulligan/badge.svg)](https://docs.rs/mulligan)
 
-`mulligan` provides a fluent API for retrying async operations with customizable retry policies, backoff strategies, and jitter. It supports both `tokio` and `async-std` runtimes.
+`mulligan` provides a fluent API for retrying async operations with customizable retry policies, backoff strategies, and jitter. It supports the `tokio` runtime.
 
 ## Features
 
@@ -22,7 +22,6 @@ A flexible retry library for Rust async operations with configurable backoff str
 - Custom retry conditions
 - Async runtime support:
   - `tokio` (via `tokio` feature)
-  - `async-std` (via `async-std` feature)
 
 ## Contributing
 
@@ -103,5 +102,5 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mulligan = { version = "0.1", features = ["tokio"] } # or ["async-std"]
+mulligan = { version = "0.1", features = ["tokio"] }
 ```

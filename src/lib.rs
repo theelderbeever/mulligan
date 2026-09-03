@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
-#[cfg(all(feature = "iter", not(any(feature = "tokio", feature = "async-std"))))]
-compile_error!("The 'iter' feature requires either the 'tokio' or 'async-std' feature");
+#[cfg(all(feature = "iter", not(feature = "tokio")))]
+compile_error!("The 'iter' feature requires the 'tokio' feature");
 
 pub mod backoff;
 mod blocking;

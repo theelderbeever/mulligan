@@ -10,14 +10,12 @@ documentation = "https://docs.rs/mulligan"
 rust-version = "1.85"
 
 [features]
-default = ["tokio"]           # Make tokio the default runtime
-tokio = ["dep:tokio"]         # Depend on tokio when this feature is enabled
-async-std = ["dep:async-std"] # Depend on async-std when this feature is enabled
-iter = ["dep:futures-core"]   # Async retry-attempt interface
+default = ["tokio"]        # Make tokio the default runtime
+tokio = ["dep:tokio"]      # Depend on tokio when this feature is enabled
+iter = ["dep:futures-core"] # Async retry-attempt interface
 
 [dependencies]
 tokio = { version = "1", optional = true, features = ["time"] }
-async-std = { version = "1", optional = true }
 rand = { version = "0.8" }
 futures-core = { version = "0.3", optional = true }
 

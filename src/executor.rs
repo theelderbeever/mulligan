@@ -15,7 +15,7 @@ pub use crate::jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
 ///     Err(std::io::Error::other("uh oh!"))
 /// }
 ///
-/// # #[cfg(any(feature = "tokio", feature = "async-std"))]
+/// # #[cfg(feature = "tokio")]
 /// # async fn example() {
 /// mulligan::until_ok()
 ///     .stop_after(5)
@@ -43,7 +43,7 @@ pub fn until_ok<T, E>() -> Mulligan<'static, T, E, impl Fn(&Result<T, E>) -> boo
 ///     Err(std::io::Error::other("uh oh!"))
 /// }
 ///
-/// # #[cfg(any(feature = "tokio", feature = "async-std"))]
+/// # #[cfg(feature = "tokio")]
 /// # async fn example() {
 /// mulligan::until(|res| res.is_ok())
 ///     .stop_after(5)
@@ -113,7 +113,7 @@ where
     ///     .await;
     /// # }
     /// ```
-    #[cfg(any(feature = "tokio", feature = "async-std"))]
+    #[cfg(feature = "tokio")]
     pub async fn execute<F>(mut self, f: F) -> Result<T, E>
     where
         F: AsyncFn() -> Result<T, E>,
@@ -344,10 +344,6 @@ where
     #[cfg(feature = "tokio")]
     async fn sleep(dur: Duration) {
         tokio::time::sleep(dur).await;
-    }
-    #[cfg(all(feature = "async-std", not(feature = "tokio")))]
-    async fn sleep(dur: Duration) {
-        async_std::task::sleep(dur).await;
     }
 }
 
