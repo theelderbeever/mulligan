@@ -1,8 +1,13 @@
-# Deserialize this configuration as RetryPolicy<Exponential, Full>.
 stop_after = 5
-backoff = "250ms"
 max_delay = "3s"
 
-# Stateless jitter strategies are selected by the RetryPolicy type and can be
-# omitted. For RetryPolicy<Exponential, Decorrelated>, add its base duration:
-# jitter = "100ms"
+[backoff]
+kind = "exponential"
+base = "250ms"
+
+[jitter]
+kind = "full"
+
+# To use decorrelated jitter, replace the kind above and add its base duration:
+# kind = "decorrelated"
+# base = "100ms"

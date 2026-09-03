@@ -1,5 +1,50 @@
 use std::time::Duration;
 
+#[cfg(feature = "serde")]
+#[derive(Clone, Copy, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum BackoffKind {
+    Fixed,
+    Linear,
+    Exponential,
+}
+
+#[cfg(feature = "serde")]
+impl BackoffKind {
+    const fn name(self) -> &'static str {
+        match self {
+            Self::Fixed => "fixed",
+            Self::Linear => "linear",
+            Self::Exponential => "exponential",
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BackoffConfig {
+    kind: BackoffKind,
+    base: duration_string::DurationString,
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_backoff<'de, D>(deserializer: D, expected: BackoffKind) -> Result<Duration, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let config = <BackoffConfig as serde::Deserialize>::deserialize(deserializer)?;
+    if config.kind != expected {
+        return Err(serde::de::Error::custom(format_args!(
+            "expected `{}` backoff, found `{}`",
+            expected.name(),
+            config.kind.name()
+        )));
+    }
+
+    Ok(config.base.into())
+}
+
 pub trait Backoff {
     fn delay(&self, attempt: u32) -> Duration;
     fn base(&self) -> Duration;
@@ -14,9 +59,7 @@ impl<'de> serde::Deserialize<'de> for Fixed {
     where
         D: serde::Deserializer<'de>,
     {
-        let duration =
-            <duration_string::DurationString as serde::Deserialize>::deserialize(deserializer)?;
-        Ok(Self::base(duration.into()))
+        deserialize_backoff(deserializer, BackoffKind::Fixed).map(Self::base)
     }
 }
 
@@ -44,9 +87,7 @@ impl<'de> serde::Deserialize<'de> for Linear {
     where
         D: serde::Deserializer<'de>,
     {
-        let duration =
-            <duration_string::DurationString as serde::Deserialize>::deserialize(deserializer)?;
-        Ok(Self::base(duration.into()))
+        deserialize_backoff(deserializer, BackoffKind::Linear).map(Self::base)
     }
 }
 
@@ -74,9 +115,7 @@ impl<'de> serde::Deserialize<'de> for Exponential {
     where
         D: serde::Deserializer<'de>,
     {
-        let duration =
-            <duration_string::DurationString as serde::Deserialize>::deserialize(deserializer)?;
-        Ok(Self::base(duration.into()))
+        deserialize_backoff(deserializer, BackoffKind::Exponential).map(Self::base)
     }
 }
 
@@ -102,13 +141,21 @@ mod serde_tests {
     use super::{Backoff, Exponential, Fixed, Linear};
 
     #[test]
-    fn deserializes_backoff_durations_from_strings() {
-        let fixed: Fixed = serde_json::from_str(r#""250ms""#).unwrap();
-        let linear: Linear = serde_json::from_str(r#""2s""#).unwrap();
-        let exponential: Exponential = serde_json::from_str(r#""1m""#).unwrap();
+    fn deserializes_named_backoffs_with_duration_strings() {
+        let fixed: Fixed = serde_json::from_str(r#"{"kind":"fixed","base":"250ms"}"#).unwrap();
+        let linear: Linear = serde_json::from_str(r#"{"kind":"linear","base":"2s"}"#).unwrap();
+        let exponential: Exponential =
+            serde_json::from_str(r#"{"kind":"exponential","base":"1m"}"#).unwrap();
 
         assert_eq!(fixed.base(), Duration::from_millis(250));
         assert_eq!(linear.base(), Duration::from_secs(2));
         assert_eq!(exponential.base(), Duration::from_secs(60));
+    }
+
+    #[test]
+    fn rejects_a_backoff_kind_that_does_not_match_the_target_type() {
+        let result = serde_json::from_str::<Fixed>(r#"{"kind":"linear","base":"250ms"}"#);
+
+        assert!(result.is_err());
     }
 }

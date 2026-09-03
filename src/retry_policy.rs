@@ -16,7 +16,6 @@ pub fn retry() -> RetryPolicy<Fixed, NoJitter> {
 pub struct RetryPolicy<Back: Backoff, Jit: Jitter> {
     pub(crate) stop_after: Option<u32>,
     pub(crate) backoff: Back,
-    #[cfg_attr(feature = "serde", serde(default))]
     pub(crate) jitter: Jit,
     #[cfg_attr(
         feature = "serde",
@@ -164,7 +163,8 @@ mod serde_tests {
         let policy: RetryPolicy<Exponential, Full> = serde_json::from_str(
             r#"{
                 "stop_after": 4,
-                "backoff": "250ms",
+                "backoff": { "kind": "exponential", "base": "250ms" },
+                "jitter": { "kind": "full" },
                 "max_delay": "3s"
             }"#,
         )
@@ -177,8 +177,13 @@ mod serde_tests {
 
     #[test]
     fn defaults_to_no_retry_limit_or_maximum_delay() {
-        let policy: RetryPolicy<Exponential, NoJitter> =
-            serde_json::from_str(r#"{"backoff":"1s"}"#).unwrap();
+        let policy: RetryPolicy<Exponential, NoJitter> = serde_json::from_str(
+            r#"{
+                "backoff": { "kind": "exponential", "base": "1s" },
+                "jitter": { "kind": "none" }
+            }"#,
+        )
+        .unwrap();
 
         assert_eq!(policy.stop_after, None);
         assert_eq!(policy.max_delay, None);
@@ -187,7 +192,10 @@ mod serde_tests {
     #[test]
     fn rejects_an_invalid_duration_string() {
         let result = serde_json::from_str::<RetryPolicy<Exponential, NoJitter>>(
-            r#"{"backoff":"eventually"}"#,
+            r#"{
+                "backoff": { "kind": "exponential", "base": "eventually" },
+                "jitter": { "kind": "none" }
+            }"#,
         );
 
         assert!(result.is_err());
