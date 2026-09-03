@@ -22,6 +22,7 @@ A flexible retry library for Rust async operations with configurable backoff str
 - Custom retry conditions
 - Async runtime support:
   - `tokio` (via `tokio` feature)
+- Retry policy deserialization (via the `serde` feature)
 
 ## Contributing
 
@@ -129,3 +130,30 @@ Add this to your `Cargo.toml`:
 [dependencies]
 mulligan = { version = "0.1", features = ["tokio"] }
 ```
+
+## Serde
+
+Enable the `serde` feature to deserialize a typed retry policy. The policy's
+backoff and jitter strategies are named explicitly in the configuration and
+must match its Rust type. Backoff, `max_delay`, and decorrelated-jitter
+durations use [`duration-string`](https://crates.io/crates/duration-string)
+values.
+
+```rust
+use mulligan::{Exponential, Full, RetryPolicy};
+
+let policy: RetryPolicy<Exponential, Full> = serde_json::from_str(r#"{
+    "stop_after": 5,
+    "backoff": { "kind": "exponential", "base": "250ms" },
+    "jitter": { "kind": "full" },
+    "max_delay": "3s"
+}"#)?;
+
+# Ok::<(), serde_json::Error>(())
+```
+
+The available backoff kinds are `fixed`, `linear`, and `exponential`. The
+available jitter kinds are `none`, `full`, `equal`, and `decorrelated`;
+decorrelated jitter also requires a `base` duration. See
+[`examples/retry_policy.toml`](examples/retry_policy.toml) for an equivalent
+TOML configuration.

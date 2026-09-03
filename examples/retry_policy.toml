@@ -1,0 +1,13 @@
+stop_after = 5
+max_delay = "3s"
+
+[backoff]
+kind = "exponential"
+base = "250ms"
+
+[jitter]
+kind = "full"
+
+# To use decorrelated jitter, replace the kind above and add its base duration:
+# kind = "decorrelated"
+# base = "100ms"
