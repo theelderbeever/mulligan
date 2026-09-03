@@ -16,11 +16,6 @@ fn sleep(dur: Duration) -> SleepFuture {
     Box::pin(tokio::time::sleep(dur))
 }
 
-#[cfg(all(feature = "async-std", not(feature = "tokio")))]
-fn sleep(dur: Duration) -> SleepFuture {
-    Box::pin(async_std::task::sleep(dur))
-}
-
 /// An asynchronous sequence of attempts produced by a retry policy.
 pub struct AsyncAttempts<Back: Backoff, Jit: Jitter> {
     current: u32,
