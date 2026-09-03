@@ -5,9 +5,9 @@ use std::time::Duration;
 
 use futures_core::Stream;
 
-use crate::backoff::{Backoff, Exponential, Fixed, Linear};
-use crate::jitter::{Jitter, NoJitter};
-use crate::retry_policy::retry_policy_builder;
+use crate::backoff::Backoff;
+use crate::jitter::Jitter;
+use crate::retry_policy::RetryPolicy;
 
 type SleepFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
 
@@ -21,26 +21,30 @@ fn sleep(dur: Duration) -> SleepFuture {
     Box::pin(async_std::task::sleep(dur))
 }
 
-pub struct RetryStream<Back: Backoff, Jit: Jitter> {
+/// An asynchronous sequence of attempts produced by a retry policy.
+pub struct AsyncAttempts<Back: Backoff, Jit: Jitter> {
     current: u32,
-    stop_after: Option<u32>,
-    backoff: Back,
-    jitterable: Jit,
-    max: Option<Duration>,
+    policy: RetryPolicy<Back, Jit>,
     sleep: Option<SleepFuture>,
 }
 
-retry_policy_builder!(RetryStream {
-    sleep: Option<SleepFuture> = None,
-});
+impl<Back: Backoff, Jit: Jitter> AsyncAttempts<Back, Jit> {
+    pub(crate) fn new(policy: RetryPolicy<Back, Jit>) -> Self {
+        Self {
+            current: 0,
+            policy,
+            sleep: None,
+        }
+    }
+}
 
-impl<Back: Backoff + Unpin, Jit: Jitter + Unpin> Stream for RetryStream<Back, Jit> {
+impl<Back: Backoff + Unpin, Jit: Jitter + Unpin> Stream for AsyncAttempts<Back, Jit> {
     type Item = u32;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
 
-        if this.stop_after.is_some_and(|max| this.current > max) {
+        if this.policy.should_stop(this.current) {
             return Poll::Ready(None);
         }
 
@@ -50,7 +54,7 @@ impl<Back: Backoff + Unpin, Jit: Jitter + Unpin> Stream for RetryStream<Back, Ji
         }
 
         if this.sleep.is_none() {
-            let delay = this.calculate_delay(this.current - 1);
+            let delay = this.policy.calculate_delay(this.current - 1);
             this.sleep = Some(sleep(delay));
         }
 
@@ -70,18 +74,18 @@ impl<Back: Backoff + Unpin, Jit: Jitter + Unpin> Stream for RetryStream<Back, Ji
 mod tests {
     use futures::StreamExt;
 
-    use super::RetryStream;
+    use crate::retry;
 
     #[tokio::test]
     async fn stop_after_limits_retries_after_the_initial_attempt() {
-        let attempts = RetryStream::new().stop_after(3).collect::<Vec<_>>().await;
+        let attempts = retry().stop_after(3).attempts().collect::<Vec<_>>().await;
 
         assert_eq!(attempts, vec![0, 1, 2, 3]);
     }
 
     #[tokio::test]
     async fn zero_retries_still_yields_the_initial_attempt() {
-        let attempts = RetryStream::new().stop_after(0).collect::<Vec<_>>().await;
+        let attempts = retry().stop_after(0).attempts().collect::<Vec<_>>().await;
 
         assert_eq!(attempts, vec![0]);
     }

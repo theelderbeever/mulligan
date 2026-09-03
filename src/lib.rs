@@ -4,20 +4,18 @@
 compile_error!("The 'iter' feature requires either the 'tokio' or 'async-std' feature");
 
 pub mod backoff;
-pub mod blocking;
+mod blocking;
 pub mod executor;
 pub mod jitter;
 mod retry_policy;
 
 #[cfg(feature = "iter")]
-pub mod iter;
+mod iter;
 
 pub use backoff::{Backoff, Exponential, Fixed, Linear};
+pub use blocking::Attempts;
 pub use executor::{until, until_ok, Mulligan};
-pub use jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
-
-/// Create an async retry stream with default settings (no delay, no limit).
 #[cfg(feature = "iter")]
-pub fn iter() -> iter::RetryStream<backoff::Fixed, jitter::NoJitter> {
-    iter::RetryStream::new()
-}
+pub use iter::AsyncAttempts;
+pub use jitter::{Decorrelated, Equal, Full, Jitter, NoJitter};
+pub use retry_policy::{retry, RetryPolicy};
