@@ -183,6 +183,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "duration-string"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edbd404ab304f4426de3e981a875a77129597ce04202c9b8b4502c6f1c246809"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "encoding_rs"
 version = "0.8.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -762,12 +771,14 @@ dependencies = [
 name = "mulligan"
 version = "0.6.0"
 dependencies = [
+ "duration-string",
  "env_logger",
  "futures",
  "futures-core",
  "log",
  "rand",
  "reqwest",
+ "serde",
  "serde_json",
  "tokio",
 ]
