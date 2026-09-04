@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [0.7.1](https://github.com/theelderbeever/mulligan/compare/v0.7.0...v0.7.1) - 2026-09-04
+
+### Added
+
+- configure exponential backoff multiplier ([#36](https://github.com/theelderbeever/mulligan/pull/36))
+- make retry policies clonable and debuggable ([#35](https://github.com/theelderbeever/mulligan/pull/35))
+
+### Fixed
+
+- prevent exponential backoff overflow ([#34](https://github.com/theelderbeever/mulligan/pull/34))
+
+### Other
+
+- prepare releases on workflow dispatch ([#33](https://github.com/theelderbeever/mulligan/pull/33))
+
 ## [0.7.0](https://github.com/theelderbeever/mulligan/compare/v0.6.0...v0.7.0) - 2026-09-03
 
 ### Added

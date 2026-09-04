@@ -769,7 +769,7 @@ dependencies = [
 
 [[package]]
 name = "mulligan"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "duration-string",
  "env_logger",
