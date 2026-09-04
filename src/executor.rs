@@ -323,6 +323,7 @@ where
         }
     }
     /// Wait a growing amount of time between each retry `base * 2.pow(attempt)`
+    /// Use [`Mulligan::backoff`] with [`Exponential::multiplier`] to customize the multiplier.
     pub fn exponential(self, dur: Duration) -> Mulligan<'a, T, E, Cond, Jit, Exponential> {
         Mulligan {
             stop_after: self.stop_after,

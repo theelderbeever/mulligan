@@ -4,6 +4,7 @@ max_delay = "3s"
 [backoff]
 kind = "exponential"
 base = "250ms"
+multiplier = 1.5
 
 [jitter]
 kind = "full"
