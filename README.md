@@ -58,24 +58,22 @@ Releases are prepared by [release-plz](https://release-plz.dev/) from Convention
 
 To release:
 
-1. Release-plz will open or update a release PR after changes land on `main`. You can also run the **Release** workflow manually from `main`. The PR contains the version bump and changelog generated from the commits since the last crates.io release.
-2. Review and merge that release PR.
-3. Update local `main`, then cut and push a branch whose name exactly matches the version in `Cargo.toml`:
-
-   ```shell
-   git switch main
-   git pull --ff-only
-   git switch -c release/0.7.0
-   git push origin release/0.7.0
-   ```
-
-The branch push runs formatting, linting, tests, and a package dry run. It then asks release-plz to create the `v<version>` tag and GitHub release and publish that version to crates.io. The job fails unless the branch is named `release/<Cargo.toml-version>` and points at a commit already on `main`.
+1. After the changes for a release have landed on `main`, manually run the
+   **Release** workflow from `main`. Release-plz opens or updates a release PR
+   containing the version bump and changelog generated from every commit since
+   the previous release.
+2. Review and merge the release PR. If more changes land on `main` before it is
+   merged, run the workflow again and review the updated release PR first.
+3. The merge runs formatting, linting, tests, and a package dry run before
+   release-plz publishes the crate and creates the version tag and GitHub
+   release. Approve the `crates-io` environment deployment if required.
 
 Repository setup required once:
 
 - In GitHub Actions settings, allow workflows to create pull requests.
 - Add a crates.io trusted publisher for crate `mulligan`, repository `theelderbeever/mulligan`, workflow `release.yaml`, and environment `crates-io`. The publish job uses OIDC, so no long-lived `CARGO_REGISTRY_TOKEN` secret is needed.
-- Protect `main` and `release/*` branches. Optionally require approval on the `crates-io` GitHub environment for a final manual publishing gate.
+- Protect `main`. Optionally require approval on the `crates-io` GitHub
+  environment for a final manual publishing gate.
 
 ## Quick Start
 
