@@ -54,12 +54,12 @@ impl RetryPolicy<Fixed, NoJitter> {
 
 impl<Back: Backoff, Jit: Jitter> RetryPolicy<Back, Jit> {
     /// Returns the maximum number of retries after the initial attempt.
-    pub fn get_stop_after(&self) -> Option<u32> {
+    pub fn retry_limit(&self) -> Option<u32> {
         self.stop_after
     }
 
     /// Returns the maximum delay between retries.
-    pub fn get_max_delay(&self) -> Option<Duration> {
+    pub fn delay_limit(&self) -> Option<Duration> {
         self.max_delay
     }
 
@@ -175,9 +175,9 @@ mod tests {
             .exponential(Duration::from_millis(250))
             .full_jitter();
 
-        assert_eq!(policy.get_stop_after(), Some(3));
-        assert_eq!(policy.get_max_delay(), Some(Duration::from_secs(2)));
-        assert_eq!(policy.clone().get_stop_after(), Some(3));
+        assert_eq!(policy.retry_limit(), Some(3));
+        assert_eq!(policy.delay_limit(), Some(Duration::from_secs(2)));
+        assert_eq!(policy.clone().retry_limit(), Some(3));
         assert!(format!("{policy:?}").contains("RetryPolicy"));
     }
 }
