@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+const DEFAULT_EXPONENTIAL_MULTIPLIER: f64 = 2.0;
+
 #[cfg(feature = "serde")]
 #[derive(Clone, Copy, PartialEq, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -26,8 +28,13 @@ impl BackoffKind {
 struct BackoffConfig {
     kind: BackoffKind,
     base: duration_string::DurationString,
-    #[serde(default)]
-    multiplier: Option<f64>,
+    #[serde(default = "default_exponential_multiplier")]
+    multiplier: f64,
+}
+
+#[cfg(feature = "serde")]
+const fn default_exponential_multiplier() -> f64 {
+    DEFAULT_EXPONENTIAL_MULTIPLIER
 }
 
 #[cfg(feature = "serde")]
@@ -131,8 +138,9 @@ impl<'de> serde::Deserialize<'de> for Exponential {
     where
         D: serde::Deserializer<'de>,
     {
-        deserialize_backoff_config(deserializer, BackoffKind::Exponential).map(|config| {
-            Self::base(config.base.into()).multiplier(config.multiplier.unwrap_or(2.0))
+        deserialize_backoff_config(deserializer, BackoffKind::Exponential).map(|config| Self {
+            base: config.base.into(),
+            multiplier: config.multiplier,
         })
     }
 }
@@ -141,7 +149,7 @@ impl Exponential {
     pub fn base(dur: Duration) -> Self {
         Self {
             base: dur,
-            multiplier: 2.0,
+            multiplier: DEFAULT_EXPONENTIAL_MULTIPLIER,
         }
     }
 
@@ -187,6 +195,15 @@ mod serde_tests {
 
         assert_eq!(exponential.delay(1), Duration::from_millis(750));
         assert_eq!(exponential.delay(2), Duration::from_millis(1125));
+    }
+
+    #[test]
+    fn rejects_a_null_exponential_multiplier() {
+        let result = serde_json::from_str::<Exponential>(
+            r#"{"kind":"exponential","base":"500ms","multiplier":null}"#,
+        );
+
+        assert!(result.is_err());
     }
 
     #[test]
