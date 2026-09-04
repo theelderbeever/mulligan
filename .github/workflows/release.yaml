@@ -1,16 +1,17 @@
 name: Release
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-      - 'release/**'
+    types:
+      - closed
   workflow_dispatch:
 
 jobs:
   release-pr:
     name: Prepare release PR
-    if: github.ref_name == 'main'
+    if: github.event_name == 'workflow_dispatch' && github.ref_name == 'main'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -35,7 +36,12 @@ jobs:
 
   publish:
     name: Publish to crates.io
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'release-plz-')
     runs-on: ubuntu-24.04
     environment: crates-io
     permissions:
@@ -49,30 +55,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-      - name: Validate release branch
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          package_version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "mulligan") | .version')"
-          expected_branch="release/${package_version}"
-
-          if [[ "${GITHUB_REF_NAME}" != "${expected_branch}" ]]; then
-            echo "Expected branch '${expected_branch}' for Cargo.toml version ${package_version}; got '${GITHUB_REF_NAME}'." >&2
-            exit 1
-          fi
-
-          git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "${GITHUB_REF_NAME} must be cut from main without release-only commits." >&2
-            exit 1
-          fi
       - name: Run release checks
         run: |
           cargo fmt --all -- --check
