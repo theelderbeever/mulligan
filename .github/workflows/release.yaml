@@ -7,11 +7,22 @@ on:
     types:
       - closed
   workflow_dispatch:
+    inputs:
+      publish_ref:
+        description: >-
+          Emergency recovery only: exact commit SHA to publish. Leave blank to
+          prepare a release PR.
+        required: false
+        default: ''
+        type: string
 
 jobs:
   release-pr:
     name: Prepare release PR
-    if: github.event_name == 'workflow_dispatch' && github.ref_name == 'main'
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref_name == 'main' &&
+      inputs.publish_ref == ''
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -37,11 +48,14 @@ jobs:
   publish:
     name: Publish to crates.io
     if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.base.ref == 'main' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      startsWith(github.event.pull_request.head.ref, 'release-plz-')
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.base.ref == 'main' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.event.pull_request.head.ref, 'release-plz-')) ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.ref_name == 'main' &&
+       inputs.publish_ref != '')
     runs-on: ubuntu-24.04
     environment: crates-io
     permissions:
@@ -55,9 +69,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || inputs.publish_ref }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Attach checkout to main
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "The release commit must be on main." >&2
+            exit 1
+          fi
+
+          git switch -C main
+          git branch --set-upstream-to=origin/main main
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:

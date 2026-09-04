@@ -68,6 +68,11 @@ To release:
    release-plz publishes the crate and creates the version tag and GitHub
    release. Approve the `crates-io` environment deployment if required.
 
+If publishing fails after a release PR is merged, fix the underlying problem
+and manually run the **Release** workflow from `main` with `publish_ref` set to
+the release PR's merge commit SHA. Recovery publishing accepts only commits
+that are part of `main`. Leave `publish_ref` blank during normal releases.
+
 Repository setup required once:
 
 - In GitHub Actions settings, allow workflows to create pull requests.
