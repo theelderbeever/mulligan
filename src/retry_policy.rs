@@ -13,6 +13,7 @@ pub fn retry() -> RetryPolicy<Fixed, NoJitter> {
 
 /// Configuration shared by asynchronous and synchronous attempt iterators.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+#[derive(Clone, Debug)]
 pub struct RetryPolicy<Back: Backoff, Jit: Jitter> {
     pub(crate) stop_after: Option<u32>,
     pub(crate) backoff: Back,
@@ -52,6 +53,16 @@ impl RetryPolicy<Fixed, NoJitter> {
 }
 
 impl<Back: Backoff, Jit: Jitter> RetryPolicy<Back, Jit> {
+    /// Returns the maximum number of retries after the initial attempt.
+    pub fn get_stop_after(&self) -> Option<u32> {
+        self.stop_after
+    }
+
+    /// Returns the maximum delay between retries.
+    pub fn get_max_delay(&self) -> Option<Duration> {
+        self.max_delay
+    }
+
     /// Produces asynchronous attempts using this policy.
     #[cfg(feature = "iter")]
     pub fn attempts(self) -> AsyncAttempts<Back, Jit> {
@@ -147,6 +158,27 @@ impl<Back: Backoff, Jit: Jitter> RetryPolicy<Back, Jit> {
     pub(crate) fn calculate_delay(&mut self, attempt: u32) -> Duration {
         let delay = self.backoff.delay(attempt);
         self.jitter.jitter(delay, self.max_delay)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use crate::retry;
+
+    #[test]
+    fn exposes_configuration_and_supports_debug_clone() {
+        let policy = retry()
+            .stop_after(3)
+            .max_delay(Duration::from_secs(2))
+            .exponential(Duration::from_millis(250))
+            .full_jitter();
+
+        assert_eq!(policy.get_stop_after(), Some(3));
+        assert_eq!(policy.get_max_delay(), Some(Duration::from_secs(2)));
+        assert_eq!(policy.clone().get_stop_after(), Some(3));
+        assert!(format!("{policy:?}").contains("RetryPolicy"));
     }
 }
 

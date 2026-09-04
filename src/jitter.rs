@@ -55,7 +55,7 @@ pub trait Jitter {
     fn jitter(&mut self, delay: Duration, max: Option<Duration>) -> Duration;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct NoJitter;
 
 #[cfg(feature = "serde")]
@@ -74,7 +74,7 @@ impl Jitter for NoJitter {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Full;
 
 #[cfg(feature = "serde")]
@@ -94,7 +94,7 @@ impl Jitter for Full {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Equal;
 
 #[cfg(feature = "serde")]
@@ -114,7 +114,7 @@ impl Jitter for Equal {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Decorrelated {
     base: Duration,
     previous: Duration,
