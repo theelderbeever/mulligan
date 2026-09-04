@@ -70,7 +70,18 @@ pub trait Backoff {
     fn base(&self) -> Duration;
 }
 
-#[derive(Clone, Copy)]
+fn saturating_mul_f64(duration: Duration, multiplier: f64) -> Duration {
+    let seconds = duration.as_secs_f64() * multiplier;
+    if seconds.is_nan() || seconds >= Duration::MAX.as_secs_f64() {
+        Duration::MAX
+    } else if seconds <= 0.0 {
+        Duration::ZERO
+    } else {
+        Duration::from_secs_f64(seconds)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct Fixed(Duration);
 
 #[cfg(feature = "serde")]
@@ -98,7 +109,7 @@ impl Backoff for Fixed {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Linear(Duration);
 
 #[cfg(feature = "serde")]
@@ -126,7 +137,7 @@ impl Backoff for Linear {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Exponential {
     base: Duration,
     multiplier: f64,
@@ -164,7 +175,32 @@ impl Backoff for Exponential {
         self.base
     }
     fn delay(&self, attempt: u32) -> Duration {
-        self.base.mul_f64(self.multiplier.powf(f64::from(attempt)))
+        let multiplier = self.multiplier.powf(f64::from(attempt));
+        saturating_mul_f64(self.base, multiplier)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::{Backoff, Exponential};
+
+    #[test]
+    fn exponential_delay_saturates_at_large_attempts() {
+        let backoff = Exponential::base(Duration::from_secs(1));
+
+        assert_eq!(backoff.delay(31), Duration::from_secs(1 << 31));
+        assert_eq!(backoff.delay(u32::MAX), Duration::MAX);
+    }
+
+    #[test]
+    fn uses_a_configurable_multiplier() {
+        let exponential = Exponential::base(Duration::from_secs(1)).multiplier(1.5);
+
+        assert_eq!(exponential.delay(0), Duration::from_secs(1));
+        assert_eq!(exponential.delay(1), Duration::from_millis(1500));
+        assert_eq!(exponential.delay(2), Duration::from_millis(2250));
     }
 }
 
@@ -211,21 +247,5 @@ mod serde_tests {
         let result = serde_json::from_str::<Fixed>(r#"{"kind":"linear","base":"250ms"}"#);
 
         assert!(result.is_err());
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::time::Duration;
-
-    use super::{Backoff, Exponential};
-
-    #[test]
-    fn uses_a_configurable_multiplier() {
-        let exponential = Exponential::base(Duration::from_secs(1)).multiplier(1.5);
-
-        assert_eq!(exponential.delay(0), Duration::from_secs(1));
-        assert_eq!(exponential.delay(1), Duration::from_millis(1500));
-        assert_eq!(exponential.delay(2), Duration::from_millis(2250));
     }
 }
