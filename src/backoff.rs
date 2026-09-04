@@ -130,7 +130,22 @@ impl Backoff for Exponential {
         self.0
     }
     fn delay(&self, attempt: u32) -> Duration {
-        self.0 * 2u32.pow(attempt)
+        self.0.saturating_mul(2u32.saturating_pow(attempt))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::{Backoff, Exponential};
+
+    #[test]
+    fn exponential_delay_saturates_at_large_attempts() {
+        let backoff = Exponential::base(Duration::from_secs(1));
+
+        assert_eq!(backoff.delay(31), Duration::from_secs(1 << 31));
+        assert_eq!(backoff.delay(32), Duration::from_secs(u32::MAX.into()));
     }
 }
 
