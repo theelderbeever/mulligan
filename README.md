@@ -142,7 +142,7 @@ use mulligan::{Exponential, Full, RetryPolicy};
 
 let policy: RetryPolicy<Exponential, Full> = serde_json::from_str(r#"{
     "stop_after": 5,
-    "backoff": { "kind": "exponential", "base": "250ms" },
+    "backoff": { "kind": "exponential", "base": "250ms", "multiplier": 1.5 },
     "jitter": { "kind": "full" },
     "max_delay": "3s"
 }"#)?;
@@ -151,6 +151,8 @@ let policy: RetryPolicy<Exponential, Full> = serde_json::from_str(r#"{
 ```
 
 The available backoff kinds are `fixed`, `linear`, and `exponential`. The
+exponential multiplier defaults to `2` and can be configured in serde
+configuration or with `Exponential::base(duration).multiplier(value)`. The
 available jitter kinds are `none`, `full`, `equal`, and `decorrelated`;
 decorrelated jitter also requires a `base` duration. See
 [`examples/retry_policy.toml`](examples/retry_policy.toml) for an equivalent

@@ -26,10 +26,15 @@ impl BackoffKind {
 struct BackoffConfig {
     kind: BackoffKind,
     base: duration_string::DurationString,
+    #[serde(default)]
+    multiplier: Option<f64>,
 }
 
 #[cfg(feature = "serde")]
-fn deserialize_backoff<'de, D>(deserializer: D, expected: BackoffKind) -> Result<Duration, D::Error>
+fn deserialize_backoff_config<'de, D>(
+    deserializer: D,
+    expected: BackoffKind,
+) -> Result<BackoffConfig, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -42,7 +47,15 @@ where
         )));
     }
 
-    Ok(config.base.into())
+    Ok(config)
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_backoff<'de, D>(deserializer: D, expected: BackoffKind) -> Result<Duration, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserialize_backoff_config(deserializer, expected).map(|config| config.base.into())
 }
 
 pub trait Backoff {
@@ -107,7 +120,10 @@ impl Backoff for Linear {
 }
 
 #[derive(Clone, Copy)]
-pub struct Exponential(Duration);
+pub struct Exponential {
+    base: Duration,
+    multiplier: f64,
+}
 
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Exponential {
@@ -115,22 +131,32 @@ impl<'de> serde::Deserialize<'de> for Exponential {
     where
         D: serde::Deserializer<'de>,
     {
-        deserialize_backoff(deserializer, BackoffKind::Exponential).map(Self::base)
+        deserialize_backoff_config(deserializer, BackoffKind::Exponential).map(|config| {
+            Self::base(config.base.into()).multiplier(config.multiplier.unwrap_or(2.0))
+        })
     }
 }
 
 impl Exponential {
     pub fn base(dur: Duration) -> Self {
-        Self(dur)
+        Self {
+            base: dur,
+            multiplier: 2.0,
+        }
+    }
+
+    pub fn multiplier(mut self, multiplier: f64) -> Self {
+        self.multiplier = multiplier;
+        self
     }
 }
 
 impl Backoff for Exponential {
     fn base(&self) -> Duration {
-        self.0
+        self.base
     }
     fn delay(&self, attempt: u32) -> Duration {
-        self.0 * 2u32.pow(attempt)
+        self.base.mul_f64(self.multiplier.powf(f64::from(attempt)))
     }
 }
 
@@ -150,6 +176,17 @@ mod serde_tests {
         assert_eq!(fixed.base(), Duration::from_millis(250));
         assert_eq!(linear.base(), Duration::from_secs(2));
         assert_eq!(exponential.base(), Duration::from_secs(60));
+        assert_eq!(exponential.delay(2), Duration::from_secs(240));
+    }
+
+    #[test]
+    fn deserializes_a_configurable_exponential_multiplier() {
+        let exponential: Exponential =
+            serde_json::from_str(r#"{"kind":"exponential","base":"500ms","multiplier":1.5}"#)
+                .unwrap();
+
+        assert_eq!(exponential.delay(1), Duration::from_millis(750));
+        assert_eq!(exponential.delay(2), Duration::from_millis(1125));
     }
 
     #[test]
@@ -157,5 +194,21 @@ mod serde_tests {
         let result = serde_json::from_str::<Fixed>(r#"{"kind":"linear","base":"250ms"}"#);
 
         assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::{Backoff, Exponential};
+
+    #[test]
+    fn uses_a_configurable_multiplier() {
+        let exponential = Exponential::base(Duration::from_secs(1)).multiplier(1.5);
+
+        assert_eq!(exponential.delay(0), Duration::from_secs(1));
+        assert_eq!(exponential.delay(1), Duration::from_millis(1500));
+        assert_eq!(exponential.delay(2), Duration::from_millis(2250));
     }
 }

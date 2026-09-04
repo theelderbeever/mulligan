@@ -96,6 +96,7 @@ impl<Back: Backoff, Jit: Jitter> RetryPolicy<Back, Jit> {
     }
 
     /// Waits an exponentially growing amount of time between each retry `base * 2^attempt`.
+    /// Use [`RetryPolicy::backoff`] with [`Exponential::multiplier`] to customize the multiplier.
     pub fn exponential(self, dur: Duration) -> RetryPolicy<Exponential, Jit> {
         RetryPolicy {
             stop_after: self.stop_after,
