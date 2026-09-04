@@ -50,7 +50,7 @@ pub trait Backoff {
     fn base(&self) -> Duration;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Fixed(Duration);
 
 #[cfg(feature = "serde")]
@@ -78,7 +78,7 @@ impl Backoff for Fixed {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Linear(Duration);
 
 #[cfg(feature = "serde")]
@@ -106,7 +106,7 @@ impl Backoff for Linear {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Exponential(Duration);
 
 #[cfg(feature = "serde")]
